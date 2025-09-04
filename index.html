@@ -15,19 +15,23 @@
     <div class="container">
         <header>
             <div class="header-content">
-                <h1>Chess AI Tutor</h1>
-                <p class="subtitle">Master chess with personalized AI guidance</p>
-            </div>
-            <div class="game-controls">
-                <button id="new-game" aria-label="Start a new chess game">
-                    <span>⚡</span> New Game
-                </button>
-                <button id="analyze-game" aria-label="Analyze current game">
-                    <span>📈</span> Analyze
-                </button>
-                <button id="theme-toggle" aria-label="Toggle theme">
-                    <span>🌓</span>
-                </button>
+                <div class="logo flex flex-col">
+                    <h1>Chess AI Tutor</h1>
+                    <p class="subtitle">Master chess with personalized AI guidance</p>
+                </div>
+                <div class="flex gap-3">
+                    <button id="new-game" class="btn btn-filled" aria-label="Start a new chess game">
+                        <span class="material-icons">refresh</span>
+                        New Game
+                    </button>
+                    <button id="analyze-game" class="btn btn-outlined" aria-label="Analyze current game">
+                        <span class="material-icons">analytics</span>
+                        Analyze
+                    </button>
+                    <button id="theme-toggle" class="btn btn-icon" aria-label="Toggle theme">
+                        <span class="material-icons">dark_mode</span>
+                    </button>
+                </div>
             </div>
         </header>
         
@@ -45,20 +49,29 @@
             </div>
             
             <aside class="tutor-panel">
-                <div class="tutor-section">
-                    <h3>AI Tutor</h3>
+                <div class="tutor-section card-elevated">
+                    <h3>
+                        <span class="material-icons">psychology</span>
+                        AI Tutor
+                    </h3>
                     <div id="tutor-feedback" class="feedback-area">
                         <p>Welcome! Make your first move to begin receiving guidance.</p>
                     </div>
                 </div>
                 
-                <div class="analysis-section">
-                    <h3>Game Analysis</h3>
+                <div class="analysis-section card-elevated">
+                    <h3>
+                        <span class="material-icons">timeline</span>
+                        Game Analysis
+                    </h3>
                     <div id="move-history" class="move-history"></div>
                 </div>
                 
-                <div class="patterns-section">
-                    <h3>Pattern Recognition</h3>
+                <div class="patterns-section card-elevated">
+                    <h3>
+                        <span class="material-icons">pattern</span>
+                        Pattern Recognition
+                    </h3>
                     <div id="pattern-insights" class="pattern-insights">
                         <p>Play more games to unlock pattern analysis!</p>
                     </div>

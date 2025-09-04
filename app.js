@@ -233,7 +233,7 @@ class ChessApp {
     updateThemeToggle() {
         const toggleButton = document.getElementById('theme-toggle');
         const icon = toggleButton.querySelector('span');
-        icon.textContent = this.theme === 'dark' ? '☀️' : '🌙';
+        icon.textContent = this.theme === 'dark' ? 'light_mode' : 'dark_mode';
         toggleButton.setAttribute('aria-label', `Switch to ${this.theme === 'dark' ? 'light' : 'dark'} theme`);
     }
     
