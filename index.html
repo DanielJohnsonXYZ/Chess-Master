@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess AI Tutor</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Chess AI Tutor</h1>
+            <div class="game-controls">
+                <button id="new-game">New Game</button>
+                <button id="analyze-game">Analyze Game</button>
+            </div>
+        </header>
+        
+        <main class="game-area">
+            <div class="chess-section">
+                <div id="chess-board" class="chess-board"></div>
+                <div class="game-info">
+                    <div id="current-player">White to move</div>
+                    <div id="move-counter">Move: 1</div>
+                    <div id="captured-pieces">
+                        <div class="captured white-captured"></div>
+                        <div class="captured black-captured"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <aside class="tutor-panel">
+                <div class="tutor-section">
+                    <h3>AI Tutor</h3>
+                    <div id="tutor-feedback" class="feedback-area">
+                        <p>Welcome! Make your first move to begin receiving guidance.</p>
+                    </div>
+                </div>
+                
+                <div class="analysis-section">
+                    <h3>Game Analysis</h3>
+                    <div id="move-history" class="move-history"></div>
+                </div>
+                
+                <div class="patterns-section">
+                    <h3>Pattern Recognition</h3>
+                    <div id="pattern-insights" class="pattern-insights">
+                        <p>Play more games to unlock pattern analysis!</p>
+                    </div>
+                </div>
+            </aside>
+        </main>
+    </div>
+    
+    <script src="chess-engine.js"></script>
+    <script src="ai-tutor.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
