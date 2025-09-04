@@ -2,11 +2,13 @@ class ChessApp {
     constructor() {
         this.chessEngine = new ChessEngine();
         this.aiTutor = new AITutor();
+        this.theme = localStorage.getItem('chess-theme') || 'dark';
         this.init();
     }
     
     init() {
         this.setupEventListeners();
+        this.initializeTheme();
         this.chessEngine.renderBoard();
         this.chessEngine.updateGameInfo();
         
@@ -15,6 +17,11 @@ class ChessApp {
         
         // Load and display player patterns
         this.loadPlayerProgress();
+    }
+    
+    initializeTheme() {
+        document.documentElement.setAttribute('data-theme', this.theme);
+        this.updateThemeToggle();
     }
     
     setupEventListeners() {
@@ -28,6 +35,11 @@ class ChessApp {
             this.analyzeCurrentGame();
         });
         
+        // Theme toggle button
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            this.toggleTheme();
+        });
+        
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
             if (e.key === 'n' && e.ctrlKey) {
@@ -38,6 +50,11 @@ class ChessApp {
             if (e.key === 'a' && e.ctrlKey) {
                 e.preventDefault();
                 this.analyzeCurrentGame();
+            }
+            
+            if (e.key === 't' && e.ctrlKey) {
+                e.preventDefault();
+                this.toggleTheme();
             }
         });
     }
@@ -198,6 +215,26 @@ class ChessApp {
     updatePatternInsights() {
         // This triggers the pattern analysis and updates the display
         this.aiTutor.analyzePlayerPatterns();
+    }
+    
+    toggleTheme() {
+        this.theme = this.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', this.theme);
+        localStorage.setItem('chess-theme', this.theme);
+        this.updateThemeToggle();
+        
+        // Add a subtle animation
+        document.body.style.transition = 'background-color 0.3s ease';
+        setTimeout(() => {
+            document.body.style.transition = '';
+        }, 300);
+    }
+    
+    updateThemeToggle() {
+        const toggleButton = document.getElementById('theme-toggle');
+        const icon = toggleButton.querySelector('span');
+        icon.textContent = this.theme === 'dark' ? '☀️' : '🌙';
+        toggleButton.setAttribute('aria-label', `Switch to ${this.theme === 'dark' ? 'light' : 'dark'} theme`);
     }
     
     showFeedback(message, type = 'info') {

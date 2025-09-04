@@ -3,16 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chess AI Tutor</title>
+    <title>Chess AI Tutor • Master Chess with AI Guidance</title>
+    <meta name="description" content="Improve your chess skills with real-time AI feedback, pattern recognition, and personalized coaching. Play, learn, and master chess strategy.">
+    <meta name="keywords" content="chess, AI tutor, chess training, chess strategy, chess improvement">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♛</text></svg>">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Chess AI Tutor</h1>
+            <div class="header-content">
+                <h1>Chess AI Tutor</h1>
+                <p class="subtitle">Master chess with personalized AI guidance</p>
+            </div>
             <div class="game-controls">
-                <button id="new-game">New Game</button>
-                <button id="analyze-game">Analyze Game</button>
+                <button id="new-game" aria-label="Start a new chess game">
+                    <span>⚡</span> New Game
+                </button>
+                <button id="analyze-game" aria-label="Analyze current game">
+                    <span>📈</span> Analyze
+                </button>
+                <button id="theme-toggle" aria-label="Toggle theme">
+                    <span>🌓</span>
+                </button>
             </div>
         </header>
         
