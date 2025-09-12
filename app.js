@@ -2,6 +2,8 @@ class ChessApp {
     constructor() {
         this.chessEngine = new ChessEngine();
         this.aiTutor = new AITutor();
+        this.chessAI = new ChessAI(3); // Default difficulty level 3
+        this.playingAgainstAI = false;
         this.theme = localStorage.getItem('chess-theme') || 'dark';
         this.init();
     }
@@ -12,8 +14,9 @@ class ChessApp {
         this.chessEngine.renderBoard();
         this.chessEngine.updateGameInfo();
         
-        // Make AI tutor globally accessible
+        // Make components globally accessible
         window.aiTutor = this.aiTutor;
+        window.chessApp = this;
         
         // Load and display player patterns
         this.loadPlayerProgress();
@@ -33,6 +36,16 @@ class ChessApp {
         // Analyze game button
         document.getElementById('analyze-game').addEventListener('click', () => {
             this.analyzeCurrentGame();
+        });
+        
+        // Play AI button
+        document.getElementById('play-ai').addEventListener('click', () => {
+            this.toggleAIMode();
+        });
+        
+        // AI settings button
+        document.getElementById('ai-settings').addEventListener('click', () => {
+            this.showAISettings();
         });
         
         // Theme toggle button
@@ -75,12 +88,25 @@ class ChessApp {
         console.log('New game started');
     }
     
-    analyzeCurrentGame() {
+    async analyzeCurrentGame() {
         if (this.chessEngine.moveHistory.length === 0) {
             this.showFeedback('No moves to analyze yet!', 'info');
             return;
         }
         
+        // Try enhanced AI analysis first
+        if (window.enhancedAI) {
+            try {
+                this.showFeedback('Analyzing your game with AI...', 'info');
+                const patterns = await window.enhancedAI.analyzePlayerPatterns(this.chessEngine.moveHistory);
+                this.displayEnhancedGameAnalysis(patterns);
+                return;
+            } catch (error) {
+                console.log('Enhanced analysis failed, using basic analysis');
+            }
+        }
+        
+        // Fallback to basic analysis
         const gameAnalysis = this.aiTutor.analyzeGame(this.chessEngine.moveHistory);
         this.displayGameAnalysis(gameAnalysis);
     }
@@ -133,6 +159,80 @@ class ChessApp {
         
         // Save game analysis to history
         this.saveGameToHistory(analysis);
+    }
+    
+    displayEnhancedGameAnalysis(patterns) {
+        const feedbackElement = document.getElementById('tutor-feedback');
+        
+        const styleColors = {
+            aggressive: '#ef4444',
+            positional: '#3b82f6',
+            tactical: '#f59e0b',
+            balanced: '#22c55e',
+            developing: '#6b7280'
+        };
+        
+        const styleColor = styleColors[patterns.playingStyle] || '#6b7280';
+        
+        const analysisHtml = `
+            <div class="enhanced-analysis">
+                <h4 style="margin-bottom: 16px;">AI-Powered Game Analysis</h4>
+                
+                <div class="analysis-section" style="margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <strong>Playing Style:</strong>
+                        <span style="color: ${styleColor}; font-weight: 600; text-transform: capitalize;">
+                            ${patterns.playingStyle}
+                        </span>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <strong>Skill Level:</strong> 
+                        <span style="text-transform: capitalize;">${patterns.skillLevel}</span>
+                    </div>
+                </div>
+                
+                ${patterns.strengths.length > 0 ? `
+                    <div class="analysis-section" style="margin-bottom: 16px;">
+                        <strong style="color: #22c55e;">🎯 Strengths:</strong>
+                        <ul style="margin: 4px 0 0 20px; font-size: 0.875rem;">
+                            ${patterns.strengths.map(s => `<li>${s}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
+                ${patterns.weaknesses.length > 0 ? `
+                    <div class="analysis-section" style="margin-bottom: 16px;">
+                        <strong style="color: #f59e0b;">⚠️ Areas to Improve:</strong>
+                        <ul style="margin: 4px 0 0 20px; font-size: 0.875rem;">
+                            ${patterns.weaknesses.map(w => `<li>${w}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
+                ${patterns.patterns.length > 0 ? `
+                    <div class="analysis-section" style="margin-bottom: 16px;">
+                        <strong>🔍 Patterns Identified:</strong>
+                        <ul style="margin: 4px 0 0 20px; font-size: 0.875rem;">
+                            ${patterns.patterns.map(p => `<li>${p}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
+                ${patterns.recommendations.length > 0 ? `
+                    <div class="analysis-section" style="background: var(--color-accent-subtle); padding: 12px; border-radius: 8px; margin-top: 16px;">
+                        <strong>🚀 Personalized Recommendations:</strong>
+                        <ul style="margin: 8px 0 0 20px; font-size: 0.875rem;">
+                            ${patterns.recommendations.map(r => `<li>${r}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        feedbackElement.innerHTML = analysisHtml;
+        
+        // Save enhanced analysis to history
+        this.saveGameToHistory({ enhancedAnalysis: patterns });
     }
     
     getQualityColor(quality) {
@@ -212,9 +312,76 @@ class ChessApp {
         }
     }
     
-    updatePatternInsights() {
-        // This triggers the pattern analysis and updates the display
+    async updatePatternInsights() {
+        const patternElement = document.getElementById('pattern-insights');
+        if (!patternElement) return;
+        
+        const history = this.aiTutor.loadGameHistory();
+        
+        if (history.length < 2) {
+            patternElement.innerHTML = '<p class="text-sm">Play more games to unlock pattern analysis!</p>';
+            return;
+        }
+        
+        // Try enhanced pattern analysis
+        if (window.enhancedAI) {
+            try {
+                const patterns = await window.enhancedAI.analyzePlayerPatterns(history);
+                this.displayPatternInsights(patterns);
+                return;
+            } catch (error) {
+                console.log('Enhanced pattern analysis failed, using basic analysis');
+            }
+        }
+        
+        // Fallback to basic pattern analysis
         this.aiTutor.analyzePlayerPatterns();
+    }
+    
+    displayPatternInsights(patterns) {
+        const patternElement = document.getElementById('pattern-insights');
+        if (!patternElement) return;
+        
+        const styleColors = {
+            aggressive: '#ef4444',
+            positional: '#3b82f6', 
+            tactical: '#f59e0b',
+            balanced: '#22c55e',
+            developing: '#6b7280'
+        };
+        
+        const styleColor = styleColors[patterns.playingStyle] || '#6b7280';
+        
+        const patternHtml = `
+            <div class="pattern-summary">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                    <strong>Style:</strong>
+                    <span style="color: ${styleColor}; font-weight: 600; text-transform: capitalize;">
+                        ${patterns.playingStyle}
+                    </span>
+                </div>
+                
+                ${patterns.strengths.length > 0 ? `
+                    <div class="insight-item insight-strength">
+                        <strong>Top Strength:</strong> ${patterns.strengths[0]}
+                    </div>
+                ` : ''}
+                
+                ${patterns.weaknesses.length > 0 ? `
+                    <div class="insight-item insight-weakness">
+                        <strong>Focus Area:</strong> ${patterns.weaknesses[0]}
+                    </div>
+                ` : ''}
+                
+                ${patterns.recommendations.length > 0 ? `
+                    <div class="insight-item" style="background: var(--color-accent-subtle); padding: 8px; border-radius: 6px; margin-top: 8px;">
+                        <strong>Next Goal:</strong> ${patterns.recommendations[0]}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        patternElement.innerHTML = patternHtml;
     }
     
     toggleTheme() {
@@ -262,6 +429,148 @@ class ChessApp {
         `;
         
         feedbackElement.innerHTML = feedbackHtml;
+    }
+    
+    toggleAIMode() {
+        this.playingAgainstAI = !this.playingAgainstAI;
+        const buttonText = document.getElementById('ai-mode-text');
+        const button = document.getElementById('play-ai');
+        
+        if (this.playingAgainstAI) {
+            buttonText.textContent = 'Stop AI';
+            button.classList.add('btn-danger');
+            button.classList.remove('btn-accent');
+            
+            // Start new game if current game has moves
+            if (this.chessEngine.moveHistory.length > 0) {
+                this.startNewGame();
+            }
+            
+            // If AI plays as black and it's white's turn, let human play
+            // If AI plays as white, make AI move immediately
+            if (this.chessAI.color === 'white' && this.chessEngine.currentPlayer === 'white') {
+                setTimeout(() => {
+                    this.chessAI.makeMove(this.chessEngine);
+                }, 500);
+            }
+            
+            this.showFeedback('Playing against AI - Good luck!', 'success');
+        } else {
+            buttonText.textContent = 'Play AI';
+            button.classList.remove('btn-danger');
+            button.classList.add('btn-accent');
+            this.showFeedback('AI opponent disabled', 'info');
+        }
+    }
+    
+    setAIDifficulty(level) {
+        this.chessAI.setDifficulty(level);
+        this.showFeedback(`AI difficulty set to ${level}`, 'success');
+    }
+    
+    setAIColor(color) {
+        this.chessAI.setColor(color);
+        
+        // If switching to white and it's currently white's turn, make AI move
+        if (color === 'white' && this.chessEngine.currentPlayer === 'white' && this.playingAgainstAI && !this.chessEngine.gameOver) {
+            setTimeout(() => {
+                this.chessAI.makeMove(this.chessEngine);
+            }, 500);
+        }
+        
+        this.showFeedback(`AI now plays as ${color}`, 'success');
+    }
+    
+    showAISettings() {
+        const modal = document.getElementById('ai-settings-modal');
+        const keyInput = document.getElementById('openai-key');
+        const statusIndicator = document.getElementById('ai-status-indicator');
+        
+        // Show current API key status
+        this.updateAIStatus();
+        
+        // Set up modal event listeners
+        document.getElementById('close-modal').onclick = () => this.hideAISettings();
+        document.getElementById('save-api-key').onclick = () => this.saveAPIKey();
+        document.getElementById('remove-api-key').onclick = () => this.removeAPIKey();
+        
+        // AI settings event listeners
+        document.getElementById('ai-difficulty').onchange = (e) => {
+            this.setAIDifficulty(parseInt(e.target.value));
+        };
+        
+        document.getElementById('ai-color').onchange = (e) => {
+            this.setAIColor(e.target.value);
+        };
+        
+        // Close modal when clicking outside
+        modal.onclick = (e) => {
+            if (e.target === modal) this.hideAISettings();
+        };
+        
+        // Show modal with animation
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('show'), 10);
+    }
+    
+    hideAISettings() {
+        const modal = document.getElementById('ai-settings-modal');
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 200);
+    }
+    
+    saveAPIKey() {
+        const keyInput = document.getElementById('openai-key');
+        const apiKey = keyInput.value.trim();
+        
+        if (!apiKey) {
+            this.showFeedback('Please enter a valid API key', 'error');
+            return;
+        }
+        
+        if (!apiKey.startsWith('sk-')) {
+            this.showFeedback('API key should start with "sk-"', 'error');
+            return;
+        }
+        
+        // Save the key
+        if (window.chessConfig) {
+            const success = window.chessConfig.setOpenAIKey(apiKey);
+            if (success) {
+                this.showFeedback('API key saved successfully! Enhanced AI feedback is now available.', 'success');
+                this.updateAIStatus();
+                keyInput.value = ''; // Clear the input for security
+                this.hideAISettings();
+            } else {
+                this.showFeedback('Failed to save API key', 'error');
+            }
+        }
+    }
+    
+    removeAPIKey() {
+        if (window.chessConfig) {
+            window.chessConfig.clearApiKey();
+            this.showFeedback('API key removed. Using basic AI feedback.', 'info');
+            this.updateAIStatus();
+            this.hideAISettings();
+        }
+    }
+    
+    updateAIStatus() {
+        const statusIndicator = document.getElementById('ai-status-indicator');
+        if (!statusIndicator) return;
+        
+        const hasValidKey = window.chessConfig && window.chessConfig.hasValidApiKey();
+        
+        if (hasValidKey) {
+            statusIndicator.textContent = '✅ Enhanced AI active - GPT-powered analysis enabled';
+            statusIndicator.className = 'status-indicator connected';
+        } else {
+            statusIndicator.textContent = '⚠️ Basic AI only - Add OpenAI API key for enhanced feedback';
+            statusIndicator.className = 'status-indicator disconnected';
+        }
     }
     
     // Advanced features for future enhancement

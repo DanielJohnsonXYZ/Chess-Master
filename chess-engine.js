@@ -85,6 +85,13 @@ class ChessEngine {
                 
                 // Trigger AI feedback
                 window.aiTutor?.analyzeMoveAndProvideFeedback(this.moveHistory[this.moveHistory.length - 1]);
+                
+                // Check if AI should make a move
+                if (window.chessApp && window.chessApp.playingAgainstAI && this.currentPlayer === window.chessApp.chessAI.color && !this.gameOver) {
+                    setTimeout(() => {
+                        window.chessApp.chessAI.makeMove(this);
+                    }, 100);
+                }
             } else {
                 this.selectSquare(row, col);
             }
@@ -320,8 +327,105 @@ class ChessEngine {
         this.board[toRow][toCol] = piece;
         this.board[fromRow][fromCol] = null;
         
+        // Get AI analysis for the move using enhanced AI if available
+        this.getAIFeedback(move);
+        
+        // Switch player after getting feedback
+        this.switchPlayer();
+        this.updateGameInfo();
+        
         this.renderBoard();
         this.updateMoveHistory();
+    }
+    
+    async getAIFeedback(move) {
+        if (window.enhancedAI) {
+            try {
+                const gameState = {
+                    board: this.board,
+                    currentPlayer: this.currentPlayer,
+                    moveHistory: this.moveHistory,
+                    capturedPieces: this.capturedPieces
+                };
+                
+                const analysis = await window.enhancedAI.analyzeMove(move, gameState, this.moveHistory);
+                this.displayAIFeedback(analysis);
+            } catch (error) {
+                console.log('Enhanced AI not available, using basic AI feedback');
+                // Fallback to basic AI tutor
+                if (window.aiTutor) {
+                    const feedback = window.aiTutor.provideFeedback(move, this);
+                    this.displayBasicFeedback(feedback);
+                }
+            }
+        } else if (window.aiTutor) {
+            const feedback = window.aiTutor.provideFeedback(move, this);
+            this.displayBasicFeedback(feedback);
+        }
+    }
+    
+    displayAIFeedback(analysis) {
+        const feedbackElement = document.getElementById('tutor-feedback');
+        if (!feedbackElement) return;
+        
+        const ratingColors = {
+            excellent: '#22c55e',
+            good: '#3b82f6', 
+            okay: '#6b7280',
+            questionable: '#f59e0b',
+            poor: '#ef4444'
+        };
+        
+        const ratingColor = ratingColors[analysis.rating] || '#6b7280';
+        
+        const feedbackHtml = `
+            <div class="ai-feedback">
+                <div class="feedback-rating" style="color: ${ratingColor}; font-weight: 600; margin-bottom: 8px;">
+                    ${analysis.rating.toUpperCase()} MOVE
+                </div>
+                <div class="feedback-main" style="margin-bottom: 12px;">
+                    <strong>${analysis.feedback}</strong>
+                </div>
+                ${analysis.tacticalAnalysis ? `
+                    <div class="feedback-tactical" style="margin-bottom: 8px; font-size: 0.875rem;">
+                        <strong>Tactical:</strong> ${analysis.tacticalAnalysis}
+                    </div>
+                ` : ''}
+                ${analysis.strategicAnalysis ? `
+                    <div class="feedback-strategic" style="margin-bottom: 8px; font-size: 0.875rem;">
+                        <strong>Strategic:</strong> ${analysis.strategicAnalysis}
+                    </div>
+                ` : ''}
+                ${analysis.suggestions && analysis.suggestions.length > 0 ? `
+                    <div class="feedback-suggestions" style="margin-top: 12px;">
+                        <strong>Suggestions:</strong>
+                        <ul style="margin: 4px 0 0 20px; font-size: 0.875rem;">
+                            ${analysis.suggestions.map(s => `<li>${s}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                ${analysis.learningPoint ? `
+                    <div class="feedback-learning" style="margin-top: 12px; padding: 8px; background-color: var(--color-accent-subtle); border-radius: 6px; font-size: 0.875rem;">
+                        <strong>💡 Learning Point:</strong> ${analysis.learningPoint}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+        
+        feedbackElement.innerHTML = feedbackHtml;
+    }
+    
+    displayBasicFeedback(feedback) {
+        const feedbackElement = document.getElementById('tutor-feedback');
+        if (!feedbackElement) return;
+        
+        const feedbackHtml = `
+            <div class="basic-feedback">
+                <p>${feedback}</p>
+            </div>
+        `;
+        
+        feedbackElement.innerHTML = feedbackHtml;
     }
     
     switchPlayer() {

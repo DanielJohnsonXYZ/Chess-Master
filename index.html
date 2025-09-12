@@ -32,6 +32,18 @@
                         </svg>
                         Analyze
                     </button>
+                    <button id="play-ai" class="btn btn-accent" aria-label="Play against AI">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                        </svg>
+                        <span id="ai-mode-text">Play AI</span>
+                    </button>
+                    <button id="ai-settings" class="btn btn-ghost btn-icon" aria-label="AI Settings" title="Configure OpenAI API for enhanced feedback">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </button>
                     <button id="theme-toggle" class="btn btn-ghost btn-icon" aria-label="Toggle theme">
                         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
@@ -114,8 +126,58 @@
         </div>
     </main>
     
+    <!-- AI Settings Modal -->
+    <div id="ai-settings-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>AI Settings</h3>
+                <button id="close-modal" class="btn btn-ghost btn-icon">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="ai-difficulty">AI Difficulty</label>
+                    <select id="ai-difficulty" class="form-input">
+                        <option value="1">Beginner (Level 1)</option>
+                        <option value="2">Easy (Level 2)</option>
+                        <option value="3" selected>Medium (Level 3)</option>
+                        <option value="4">Hard (Level 4)</option>
+                        <option value="5">Expert (Level 5)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ai-color">AI Plays As</label>
+                    <select id="ai-color" class="form-input">
+                        <option value="black" selected>Black (You play as White)</option>
+                        <option value="white">White (You play as Black)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="openai-key">OpenAI API Key (Optional)</label>
+                    <input type="password" id="openai-key" class="form-input" placeholder="sk-proj-...">
+                    <p class="help-text">Add your OpenAI API key for enhanced AI feedback and pattern recognition. Your key is stored locally and never sent to our servers.</p>
+                </div>
+                <div class="ai-status">
+                    <div id="ai-status-indicator" class="status-indicator"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-api-key" class="btn btn-primary">Save</button>
+                <button id="remove-api-key" class="btn btn-secondary">Remove Key</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="config.js"></script>
     <script src="chess-engine.js"></script>
+    <script src="chess-ai.js"></script>
     <script src="ai-tutor.js"></script>
+    <script src="ai-enhanced.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
