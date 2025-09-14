@@ -85,8 +85,9 @@ class ChessAI {
         console.log('chessEngine provided:', !!chessEngine);
         console.log('chessEngine.board:', !!chessEngine?.board);
         
+        let moves;
         try {
-            const moves = this.getAllValidMoves(chessEngine, this.color);
+            moves = this.getAllValidMoves(chessEngine, this.color);
             console.log('Available moves for', this.color, ':', moves.length);
             if (moves.length === 0) {
                 console.log('No valid moves found for', this.color);
