@@ -81,8 +81,21 @@ class ChessAI {
     
     // Get the best move for the AI
     getBestMove(chessEngine) {
-        const moves = this.getAllValidMoves(chessEngine, this.color);
-        if (moves.length === 0) return null;
+        console.log('getBestMove called for color:', this.color);
+        console.log('chessEngine provided:', !!chessEngine);
+        console.log('chessEngine.board:', !!chessEngine?.board);
+        
+        try {
+            const moves = this.getAllValidMoves(chessEngine, this.color);
+            console.log('Available moves for', this.color, ':', moves.length);
+            if (moves.length === 0) {
+                console.log('No valid moves found for', this.color);
+                return null;
+            }
+        } catch (error) {
+            console.error('Error in getAllValidMoves:', error);
+            return null;
+        }
         
         let bestMove = null;
         let bestScore = -Infinity;
@@ -182,13 +195,19 @@ class ChessAI {
     getAllValidMoves(chessEngine, color) {
         const moves = [];
         
+        console.log('Scanning board for', color, 'pieces');
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const piece = chessEngine.board[row][col];
                 if (piece && piece.color === color) {
+                    console.log(`Found ${color} ${piece.type} at ${row},${col}`);
                     const pieceMoves = chessEngine.getPossibleMoves(row, col);
+                    console.log(`Possible moves for ${piece.type}:`, pieceMoves);
+                    
                     for (const [toRow, toCol] of pieceMoves) {
-                        if (chessEngine.isValidMove(row, col, toRow, toCol)) {
+                        const isValid = chessEngine.isValidMove(row, col, toRow, toCol);
+                        console.log(`Move ${row},${col} to ${toRow},${toCol}: ${isValid ? 'VALID' : 'INVALID'}`);
+                        if (isValid) {
                             moves.push({
                                 fromRow: row,
                                 fromCol: col,
@@ -202,6 +221,7 @@ class ChessAI {
             }
         }
         
+        console.log('Total valid moves found:', moves.length);
         return moves;
     }
     
