@@ -86,7 +86,6 @@ class ChessEngine {
             if (this.isValidMove(selectedRow, selectedCol, row, col)) {
                 this.makeMove(selectedRow, selectedCol, row, col);
                 this.clearSelection();
-                this.switchPlayer();
                 this.updateGameInfo();
                 
                 // Trigger AI feedback
@@ -369,13 +368,11 @@ class ChessEngine {
                 console.log('Enhanced AI not available, using basic AI feedback');
                 // Fallback to basic AI tutor
                 if (window.aiTutor) {
-                    const feedback = window.aiTutor.provideFeedback(move, this);
-                    this.displayBasicFeedback(feedback);
+                    window.aiTutor.analyzeMoveAndProvideFeedback(move);
                 }
             }
         } else if (window.aiTutor) {
-            const feedback = window.aiTutor.provideFeedback(move, this);
-            this.displayBasicFeedback(feedback);
+            window.aiTutor.analyzeMoveAndProvideFeedback(move);
         }
     }
     
