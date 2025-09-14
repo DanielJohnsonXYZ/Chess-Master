@@ -66,6 +66,12 @@ class ChessEngine {
     handleSquareClick(event) {
         if (this.gameOver) return;
         
+        // Block human moves when playing against AI and it's AI's turn
+        if (window.chessApp && window.chessApp.playingAgainstAI && 
+            this.currentPlayer === window.chessApp.chessAI.color) {
+            return;
+        }
+        
         const row = parseInt(event.target.dataset.row);
         const col = parseInt(event.target.dataset.col);
         
