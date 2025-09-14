@@ -212,27 +212,74 @@ class ChessAI {
     
     // Make the AI move
     async makeMove(chessEngine) {
+        console.log('AI makeMove called, AI color:', this.color, 'current player:', chessEngine.currentPlayer);
+        
         return new Promise((resolve) => {
             // Add a small delay to make it feel more natural
             setTimeout(() => {
                 const bestMove = this.getBestMove(chessEngine);
+                console.log('AI best move:', bestMove);
                 
                 if (bestMove) {
-                    chessEngine.makeMove(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
-                    chessEngine.switchPlayer();
-                    chessEngine.updateGameInfo();
+                    // Use the chess engine's existing move logic
+                    const piece = chessEngine.board[bestMove.fromRow][bestMove.fromCol];
+                    console.log('Moving piece:', piece, 'from', bestMove.fromRow, bestMove.fromCol, 'to', bestMove.toRow, bestMove.toCol);
+                    
+                    // Capture the piece if there is one
+                    const capturedPiece = chessEngine.board[bestMove.toRow][bestMove.toCol];
+                    if (capturedPiece) {
+                        chessEngine.capturedPieces[capturedPiece.color].push(capturedPiece);
+                    }
+                    
+                    // Make the move
+                    chessEngine.board[bestMove.toRow][bestMove.toCol] = piece;
+                    chessEngine.board[bestMove.fromRow][bestMove.fromCol] = null;
+                    
+                    // Add to move history
+                    const moveNotation = this.getMoveNotation(bestMove, piece, capturedPiece);
+                    chessEngine.moveHistory.push({
+                        from: [bestMove.fromRow, bestMove.fromCol],
+                        to: [bestMove.toRow, bestMove.toCol],
+                        piece: piece,
+                        captured: capturedPiece,
+                        notation: moveNotation,
+                        moveNumber: chessEngine.moveCount
+                    });
+                    
+                    // Update game state
+                    if (chessEngine.currentPlayer === 'white') {
+                        chessEngine.moveCount++;
+                    }
+                    chessEngine.currentPlayer = chessEngine.currentPlayer === 'white' ? 'black' : 'white';
+                    
+                    // Update display
                     chessEngine.renderBoard();
+                    chessEngine.updateGameInfo();
                     
                     // Trigger AI feedback for AI's own move
                     const lastMove = chessEngine.moveHistory[chessEngine.moveHistory.length - 1];
                     if (window.aiTutor) {
                         window.aiTutor.analyzeMoveAndProvideFeedback(lastMove);
                     }
+                    
+                    console.log('AI move completed, new current player:', chessEngine.currentPlayer);
                 }
                 
                 resolve(bestMove);
             }, 500 + Math.random() * 1000); // Random delay between 0.5-1.5 seconds
         });
+    }
+    
+    // Generate move notation for history
+    getMoveNotation(move, piece, captured) {
+        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        const fromSquare = files[move.fromCol] + (8 - move.fromRow);
+        const toSquare = files[move.toCol] + (8 - move.toRow);
+        
+        const pieceSymbol = piece.type === 'pawn' ? '' : piece.type.charAt(0).toUpperCase();
+        const captureSymbol = captured ? 'x' : '';
+        
+        return `${pieceSymbol}${fromSquare}${captureSymbol}${toSquare}`;
     }
     
     // Set difficulty level (1-5)
