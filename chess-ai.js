@@ -4,6 +4,28 @@ class ChessAI {
         this.maxDepth = Math.min(difficulty + 1, 4); // Limit depth for performance
         this.color = 'black'; // AI plays as black by default
         
+        // Opening book - common strong opening moves
+        this.openingBook = {
+            // Starting position responses
+            '': ['e7-e5', 'e7-e6', 'd7-d5', 'c7-c5'], // Black responses to any white first move
+            'e2-e4': ['e7-e5', 'c7-c5', 'e7-e6', 'd7-d6'],
+            'd2-d4': ['d7-d5', 'g8-f6', 'e7-e6', 'c7-c5'],
+            'g1-f3': ['d7-d5', 'g8-f6', 'e7-e6'],
+            'c2-c4': ['e7-e5', 'c7-c5', 'g8-f6'],
+            
+            // Common opening sequences
+            'e2-e4,e7-e5': ['g1-f3', 'f1-c4', 'd2-d3'],
+            'e2-e4,c7-c5': ['g1-f3', 'd2-d3', 'f1-e2'],
+            'd2-d4,d7-d5': ['c2-c4', 'g1-f3', 'c1-f4'],
+            'd2-d4,g8-f6': ['c2-c4', 'g1-f3', 'c1-g5'],
+            
+            // Black responses to common white openings
+            'e2-e4,e7-e5,g1-f3': ['b8-c6', 'g8-f6', 'f7-f5'],
+            'e2-e4,e7-e5,f1-c4': ['g8-f6', 'f7-f5', 'b8-c6'],
+            'd2-d4,d7-d5,c2-c4': ['e7-e6', 'c7-c6', 'g8-f6'],
+            'd2-d4,g8-f6,c2-c4': ['e7-e6', 'g7-g6', 'c7-c5']
+        };
+        
         // Piece values for evaluation
         this.pieceValues = {
             pawn: 100,
@@ -81,20 +103,20 @@ class ChessAI {
     
     // Get the best move for the AI
     getBestMove(chessEngine) {
-        console.log('getBestMove called for color:', this.color);
-        console.log('chessEngine provided:', !!chessEngine);
-        console.log('chessEngine.board:', !!chessEngine?.board);
+        // Check for opening book moves first
+        const bookMove = this.getOpeningBookMove(chessEngine);
+        if (bookMove) {
+            return bookMove;
+        }
         
         let moves;
         try {
             moves = this.getAllValidMoves(chessEngine, this.color);
-            console.log('Available moves for', this.color, ':', moves.length);
             if (moves.length === 0) {
-                console.log('No valid moves found for', this.color);
                 return null;
             }
         } catch (error) {
-            console.error('Error in getAllValidMoves:', error);
+            console.error('Error in AI move generation:', error);
             return null;
         }
         
@@ -196,19 +218,14 @@ class ChessAI {
     getAllValidMoves(chessEngine, color) {
         const moves = [];
         
-        console.log('Scanning board for', color, 'pieces');
         for (let row = 0; row < 8; row++) {
             for (let col = 0; col < 8; col++) {
                 const piece = chessEngine.board[row][col];
                 if (piece && piece.color === color) {
-                    console.log(`Found ${color} ${piece.type} at ${row},${col}`);
                     const pieceMoves = chessEngine.getPossibleMoves(row, col);
-                    console.log(`Possible moves for ${piece.type}:`, pieceMoves);
                     
                     for (const [toRow, toCol] of pieceMoves) {
-                        const isValid = chessEngine.isValidMove(row, col, toRow, toCol);
-                        console.log(`Move ${row},${col} to ${toRow},${toCol}: ${isValid ? 'VALID' : 'INVALID'}`);
-                        if (isValid) {
+                        if (chessEngine.isValidMove(row, col, toRow, toCol)) {
                             moves.push({
                                 fromRow: row,
                                 fromCol: col,
@@ -222,7 +239,6 @@ class ChessAI {
             }
         }
         
-        console.log('Total valid moves found:', moves.length);
         return moves;
     }
     
@@ -233,18 +249,17 @@ class ChessAI {
     
     // Make the AI move
     async makeMove(chessEngine) {
-        console.log('AI makeMove called, AI color:', this.color, 'current player:', chessEngine.currentPlayer);
+        // Show thinking indicator
+        this.showThinkingIndicator(true);
         
         return new Promise((resolve) => {
             // Add a small delay to make it feel more natural
             setTimeout(() => {
                 const bestMove = this.getBestMove(chessEngine);
-                console.log('AI best move:', bestMove);
                 
                 if (bestMove) {
                     // Use the chess engine's existing move logic
                     const piece = chessEngine.board[bestMove.fromRow][bestMove.fromCol];
-                    console.log('Moving piece:', piece, 'from', bestMove.fromRow, bestMove.fromCol, 'to', bestMove.toRow, bestMove.toCol);
                     
                     // Capture the piece if there is one
                     const capturedPiece = chessEngine.board[bestMove.toRow][bestMove.toCol];
@@ -282,10 +297,10 @@ class ChessAI {
                     if (window.aiTutor) {
                         window.aiTutor.analyzeMoveAndProvideFeedback(lastMove);
                     }
-                    
-                    console.log('AI move completed, new current player:', chessEngine.currentPlayer);
                 }
                 
+                // Hide thinking indicator
+                this.showThinkingIndicator(false);
                 resolve(bestMove);
             }, 500 + Math.random() * 1000); // Random delay between 0.5-1.5 seconds
         });
@@ -303,6 +318,58 @@ class ChessAI {
         return `${pieceSymbol}${fromSquare}${captureSymbol}${toSquare}`;
     }
     
+    // Get opening book move if available
+    getOpeningBookMove(chessEngine) {
+        if (chessEngine.moveHistory.length > 10) return null; // Only use in opening
+        
+        // Create position key from move history
+        const moveSequence = chessEngine.moveHistory
+            .map(move => move.notation)
+            .join(',');
+        
+        // Look for moves in opening book
+        const bookMoves = this.openingBook[moveSequence];
+        if (!bookMoves || bookMoves.length === 0) return null;
+        
+        // Pick a random move from the book
+        const randomMove = bookMoves[Math.floor(Math.random() * bookMoves.length)];
+        
+        // Convert notation to move object
+        const move = this.parseMove(randomMove, chessEngine);
+        if (move && chessEngine.isValidMove(move.fromRow, move.fromCol, move.toRow, move.toCol)) {
+            return move;
+        }
+        
+        return null;
+    }
+    
+    // Parse algebraic notation to move object
+    parseMove(notation, chessEngine) {
+        const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        
+        // Simple format: e2-e4
+        if (notation.includes('-')) {
+            const [from, to] = notation.split('-');
+            const fromCol = files.indexOf(from[0]);
+            const fromRow = 8 - parseInt(from[1]);
+            const toCol = files.indexOf(to[0]);
+            const toRow = 8 - parseInt(to[1]);
+            
+            const piece = chessEngine.board[fromRow][fromCol];
+            if (piece && piece.color === this.color) {
+                return {
+                    fromRow,
+                    fromCol,
+                    toRow,
+                    toCol,
+                    piece
+                };
+            }
+        }
+        
+        return null;
+    }
+    
     // Set difficulty level (1-5)
     setDifficulty(level) {
         this.difficulty = Math.max(1, Math.min(5, level));
@@ -312,5 +379,23 @@ class ChessAI {
     // Set AI color
     setColor(color) {
         this.color = color;
+    }
+    
+    // Show/hide thinking indicator
+    showThinkingIndicator(show) {
+        const indicator = document.getElementById('ai-thinking');
+        if (indicator) {
+            indicator.style.display = show ? 'block' : 'none';
+        } else if (show) {
+            // Create thinking indicator if it doesn't exist
+            const gameInfo = document.querySelector('.game-info');
+            if (gameInfo) {
+                const thinkingDiv = document.createElement('div');
+                thinkingDiv.id = 'ai-thinking';
+                thinkingDiv.className = 'ai-thinking';
+                thinkingDiv.innerHTML = '🤖 AI is thinking...';
+                gameInfo.appendChild(thinkingDiv);
+            }
+        }
     }
 }

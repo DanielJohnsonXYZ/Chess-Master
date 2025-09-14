@@ -93,18 +93,9 @@ class ChessEngine {
                 
                 // Check if AI should make a move
                 if (window.chessApp && window.chessApp.playingAgainstAI && this.currentPlayer === window.chessApp.chessAI.color && !this.gameOver) {
-                    console.log('Triggering AI move - current player:', this.currentPlayer, 'AI color:', window.chessApp.chessAI.color);
                     setTimeout(() => {
                         window.chessApp.chessAI.makeMove(this);
                     }, 100);
-                } else {
-                    console.log('AI move not triggered:', {
-                        hasChessApp: !!window.chessApp,
-                        playingAgainstAI: window.chessApp?.playingAgainstAI,
-                        currentPlayer: this.currentPlayer,
-                        aiColor: window.chessApp?.chessAI?.color,
-                        gameOver: this.gameOver
-                    });
                 }
             } else {
                 this.selectSquare(row, col);
