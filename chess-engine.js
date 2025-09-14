@@ -312,7 +312,13 @@ class ChessEngine {
     }
     
     isValidMove(fromRow, fromCol, toRow, toCol) {
-        return this.possibleMoves.some(([r, c]) => r === toRow && c === toCol);
+        // Check if source square has a piece
+        const piece = this.board[fromRow][fromCol];
+        if (!piece) return false;
+        
+        // Get possible moves for this piece
+        const possibleMoves = this.getPossibleMoves(fromRow, fromCol);
+        return possibleMoves.some(([r, c]) => r === toRow && c === toCol);
     }
     
     makeMove(fromRow, fromCol, toRow, toCol) {
