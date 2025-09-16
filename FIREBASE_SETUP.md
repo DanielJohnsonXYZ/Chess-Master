@@ -70,7 +70,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     // Users can only read/write their own data
-    match /users/{userId}/{document=**} {
+    match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
   }

@@ -48,7 +48,7 @@ class UserDataService {
         // If user is authenticated and online, save to Firebase
         if (this.shouldUseFirestore() && uid !== 'guest') {
             try {
-                await this.saveToFirestore(`users/${uid}/gameData`, 'history', gameHistory);
+                await this.saveToFirestore(`users/${uid}`, 'gameHistory', gameHistory);
                 console.log('Game history synced to Firebase');
             } catch (error) {
                 console.error('Failed to sync game history to Firebase:', error);
@@ -63,7 +63,7 @@ class UserDataService {
         // If user is authenticated and online, try loading from Firebase first
         if (this.shouldUseFirestore() && uid !== 'guest' && this.isOnline) {
             try {
-                const cloudData = await this.loadFromFirestore(`users/${uid}/gameData`, 'history');
+                const cloudData = await this.loadFromFirestore(`users/${uid}`, 'gameHistory');
                 if (cloudData && Array.isArray(cloudData)) {
                     // Update local storage with cloud data
                     localStorage.setItem('chessAITutorHistory', JSON.stringify(cloudData));
@@ -92,7 +92,7 @@ class UserDataService {
         // If user is authenticated and online, save to Firebase
         if (this.shouldUseFirestore() && uid !== 'guest') {
             try {
-                await this.saveToFirestore(`users/${uid}/gameData`, 'patterns', patterns);
+                await this.saveToFirestore(`users/${uid}`, 'playerPatterns', patterns);
                 console.log('Player patterns synced to Firebase');
             } catch (error) {
                 console.error('Failed to sync player patterns to Firebase:', error);
@@ -107,7 +107,7 @@ class UserDataService {
         // If user is authenticated and online, try loading from Firebase first
         if (this.shouldUseFirestore() && uid !== 'guest' && this.isOnline) {
             try {
-                const cloudData = await this.loadFromFirestore(`users/${uid}/gameData`, 'patterns');
+                const cloudData = await this.loadFromFirestore(`users/${uid}`, 'playerPatterns');
                 if (cloudData && typeof cloudData === 'object') {
                     // Update local storage with cloud data
                     localStorage.setItem('chessAITutorPatterns', JSON.stringify(cloudData));
@@ -231,13 +231,13 @@ class UserDataService {
             // Sync game history
             const localHistory = JSON.parse(localStorage.getItem('chessAITutorHistory') || '[]');
             if (localHistory.length > 0) {
-                await this.saveToFirestore(`users/${uid}/gameData`, 'history', localHistory);
+                await this.saveToFirestore(`users/${uid}`, 'gameHistory', localHistory);
             }
 
             // Sync player patterns
             const localPatterns = JSON.parse(localStorage.getItem('chessAITutorPatterns') || '{}');
             if (Object.keys(localPatterns).length > 0) {
-                await this.saveToFirestore(`users/${uid}/gameData`, 'patterns', localPatterns);
+                await this.saveToFirestore(`users/${uid}`, 'playerPatterns', localPatterns);
             }
 
             // Sync user profile
@@ -267,13 +267,13 @@ class UserDataService {
             console.log('Syncing Firebase data to local...');
             
             // Sync game history
-            const cloudHistory = await this.loadFromFirestore(`users/${uid}/gameData`, 'history');
+            const cloudHistory = await this.loadFromFirestore(`users/${uid}`, 'gameHistory');
             if (cloudHistory) {
                 localStorage.setItem('chessAITutorHistory', JSON.stringify(cloudHistory));
             }
 
             // Sync player patterns
-            const cloudPatterns = await this.loadFromFirestore(`users/${uid}/gameData`, 'patterns');
+            const cloudPatterns = await this.loadFromFirestore(`users/${uid}`, 'playerPatterns');
             if (cloudPatterns) {
                 localStorage.setItem('chessAITutorPatterns', JSON.stringify(cloudPatterns));
             }
@@ -320,10 +320,10 @@ class UserDataService {
 
                 switch (item.dataType) {
                     case 'gameHistory':
-                        await this.saveToFirestore(`users/${uid}/gameData`, 'history', item.data);
+                        await this.saveToFirestore(`users/${uid}`, 'gameHistory', item.data);
                         break;
                     case 'playerPatterns':
-                        await this.saveToFirestore(`users/${uid}/gameData`, 'patterns', item.data);
+                        await this.saveToFirestore(`users/${uid}`, 'playerPatterns', item.data);
                         break;
                     case 'userProfile':
                         await this.saveToFirestore(`users/${uid}`, 'profile', item.data);
