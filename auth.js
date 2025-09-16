@@ -57,15 +57,25 @@ class AuthManager {
             }
         });
 
-        // Firebase auth state listener
-        if (window.firebaseAuth && window.isFirebaseConfigured()) {
-            const { onAuthStateChanged } = window.firebaseAuthFunctions || {};
-            if (onAuthStateChanged) {
-                onAuthStateChanged(window.firebaseAuth, (user) => {
-                    this.handleAuthStateChange(user);
-                });
+        // Set up Firebase auth state listener after Firebase initializes
+        this.setupFirebaseAuthListener();
+    }
+
+    async setupFirebaseAuthListener() {
+        // Wait a bit for Firebase to initialize
+        setTimeout(async () => {
+            if (window.firebaseAuth && window.isFirebaseConfigured()) {
+                try {
+                    const authFunctions = await this.loadFirebaseAuth();
+                    authFunctions.onAuthStateChanged(window.firebaseAuth, (user) => {
+                        this.handleAuthStateChange(user);
+                    });
+                    console.log('Firebase auth listener set up successfully');
+                } catch (error) {
+                    console.error('Failed to set up Firebase auth listener:', error);
+                }
             }
-        }
+        }, 1000);
     }
 
     checkAuthState() {
@@ -163,8 +173,16 @@ class AuthManager {
                 );
             }
 
-            // Success - modal will be closed by auth state change handler
+            // Success - close modal immediately and let auth state handler update UI
             console.log('Authentication successful');
+            this.hideLoginModal();
+            
+            // Also manually trigger auth state change in case the listener isn't working
+            setTimeout(() => {
+                if (window.firebaseAuth && window.firebaseAuth.currentUser) {
+                    this.handleAuthStateChange(window.firebaseAuth.currentUser);
+                }
+            }, 100);
 
         } catch (error) {
             console.error('Authentication error:', error);
@@ -267,11 +285,17 @@ class AuthManager {
     }
 
     hideLoginModal() {
+        console.log('Hiding login modal...');
         const modal = document.getElementById('login-modal');
-        modal.classList.remove('show');
-        setTimeout(() => {
-            modal.style.display = 'none';
-        }, 200);
+        if (modal) {
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.style.display = 'none';
+                console.log('Login modal hidden successfully');
+            }, 200);
+        } else {
+            console.error('Login modal element not found');
+        }
     }
 
     switchToLogin() {
