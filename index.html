@@ -38,7 +38,7 @@
                         </svg>
                         <span id="ai-mode-text">Play AI</span>
                     </button>
-                    <button id="ai-settings" class="btn btn-ghost btn-icon" aria-label="AI Settings" title="Configure OpenAI API for enhanced feedback">
+                    <button id="ai-settings" class="btn btn-ghost btn-icon" aria-label="AI Settings" title="Configure Claude API for enhanced feedback">
                         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
@@ -49,6 +49,13 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
                         </svg>
                     </button>
+                    <div id="user-menu" class="user-menu" style="display: none;">
+                        <button id="login-btn" class="btn btn-primary">Login</button>
+                        <div id="user-info" class="user-info" style="display: none;">
+                            <span id="user-email"></span>
+                            <button id="logout-btn" class="btn btn-secondary">Logout</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -158,9 +165,9 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="openai-key">OpenAI API Key (Optional)</label>
-                    <input type="password" id="openai-key" class="form-input" placeholder="sk-proj-...">
-                    <p class="help-text">Add your OpenAI API key for enhanced AI feedback and pattern recognition. Your key is stored locally and never sent to our servers.</p>
+                    <label for="claude-key">Claude API Key (Optional)</label>
+                    <input type="password" id="claude-key" class="form-input" placeholder="sk-ant-...">
+                    <p class="help-text">Add your Claude API key for enhanced AI feedback and pattern recognition. Your key is stored locally and never sent to our servers.</p>
                 </div>
                 <div class="ai-status">
                     <div id="ai-status-indicator" class="status-indicator"></div>
@@ -172,10 +179,80 @@
             </div>
         </div>
     </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Login to Chess AI Tutor</h3>
+                <button id="close-login-modal" class="btn btn-ghost btn-icon">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="auth-tabs" class="auth-tabs">
+                    <button id="login-tab" class="auth-tab active">Login</button>
+                    <button id="signup-tab" class="auth-tab">Sign Up</button>
+                </div>
+                
+                <form id="auth-form" class="auth-form">
+                    <div id="signup-name" class="form-group" style="display: none;">
+                        <label for="name">Full Name</label>
+                        <input type="text" id="name" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" class="form-input" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" class="form-input" required>
+                    </div>
+                    
+                    <div id="auth-error" class="error-message" style="display: none;"></div>
+                    
+                    <button type="submit" id="auth-submit" class="btn btn-primary btn-full">Login</button>
+                </form>
+                
+                <div class="auth-divider">
+                    <span>or</span>
+                </div>
+                
+                <button id="continue-guest" class="btn btn-secondary btn-full">Continue as Guest</button>
+                
+                <p class="auth-info">
+                    Signing in allows you to sync your games across devices and access your complete chess history.
+                </p>
+            </div>
+        </div>
+    </div>
     
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        // Initialize Firebase (config will be loaded from firebase-config.js)
+        window.firebaseApp = initializeApp(window.firebaseConfig);
+        window.firebaseAuth = getAuth(window.firebaseApp);
+        window.firestore = getFirestore(window.firebaseApp);
+        
+        console.log('Firebase initialized');
+    </script>
+    
+    <script src="firebase-config.js"></script>
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+    <script src="user-data.js"></script>
     <script src="chess-engine.js"></script>
     <script src="chess-ai.js"></script>
     <script src="ai-tutor.js"></script>
+    <script src="ai-enhanced.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

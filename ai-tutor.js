@@ -1,8 +1,9 @@
 class AITutor {
     constructor() {
-        this.gameHistory = this.loadGameHistory();
-        this.playerPatterns = this.loadPlayerPatterns();
+        this.gameHistory = [];
+        this.playerPatterns = {};
         this.currentGameAnalysis = [];
+        this.initializeData();
         
         this.feedbackTypes = {
             tactical: 'Tactical',
@@ -31,6 +32,17 @@ class AITutor {
             'Improve your worst-placed piece',
             'Create and exploit weaknesses'
         ];
+    }
+    
+    async initializeData() {
+        try {
+            this.gameHistory = await this.loadGameHistory();
+            this.playerPatterns = await this.loadPlayerPatterns();
+        } catch (error) {
+            console.error('Error initializing AI tutor data:', error);
+            this.gameHistory = [];
+            this.playerPatterns = {};
+        }
     }
     
     analyzeMoveAndProvideFeedback(move) {
@@ -465,7 +477,11 @@ class AITutor {
         return `${pieceSymbol}${toSquare}`;
     }
     
-    loadGameHistory() {
+    async loadGameHistory() {
+        if (window.userDataService) {
+            return await window.userDataService.loadGameHistory();
+        }
+        
         try {
             return JSON.parse(localStorage.getItem('chessAITutorHistory')) || [];
         } catch {
@@ -473,11 +489,19 @@ class AITutor {
         }
     }
     
-    saveGameHistory(history) {
-        localStorage.setItem('chessAITutorHistory', JSON.stringify(history));
+    async saveGameHistory(history) {
+        if (window.userDataService) {
+            await window.userDataService.saveGameHistory(history);
+        } else {
+            localStorage.setItem('chessAITutorHistory', JSON.stringify(history));
+        }
     }
     
-    loadPlayerPatterns() {
+    async loadPlayerPatterns() {
+        if (window.userDataService) {
+            return await window.userDataService.loadPlayerPatterns();
+        }
+        
         try {
             return JSON.parse(localStorage.getItem('chessAITutorPatterns')) || {};
         } catch {
@@ -485,8 +509,12 @@ class AITutor {
         }
     }
     
-    savePlayerPatterns(patterns) {
-        localStorage.setItem('chessAITutorPatterns', JSON.stringify(patterns));
+    async savePlayerPatterns(patterns) {
+        if (window.userDataService) {
+            await window.userDataService.savePlayerPatterns(patterns);
+        } else {
+            localStorage.setItem('chessAITutorPatterns', JSON.stringify(patterns));
+        }
         this.playerPatterns = patterns;
     }
     

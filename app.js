@@ -8,7 +8,7 @@ class ChessApp {
         this.init();
     }
     
-    init() {
+    async init() {
         this.setupEventListeners();
         this.initializeTheme();
         this.chessEngine.renderBoard();
@@ -18,8 +18,10 @@ class ChessApp {
         window.aiTutor = this.aiTutor;
         window.chessApp = this;
         
-        // Load and display player patterns
-        this.loadPlayerProgress();
+        // Wait for auth manager to initialize
+        setTimeout(async () => {
+            await this.loadPlayerProgress();
+        }, 1000);
     }
     
     initializeTheme() {
@@ -252,7 +254,7 @@ class ChessApp {
         return 'Needs Improvement 💪';
     }
     
-    saveGameToHistory(analysis = null) {
+    async saveGameToHistory(analysis = null) {
         const gameData = {
             id: Date.now(),
             date: new Date().toISOString(),
@@ -261,7 +263,7 @@ class ChessApp {
             finalPosition: this.chessEngine.board
         };
         
-        const history = this.aiTutor.loadGameHistory();
+        const history = await this.aiTutor.loadGameHistory();
         history.push(gameData);
         
         // Keep only last 50 games
@@ -269,13 +271,13 @@ class ChessApp {
             history.splice(0, history.length - 50);
         }
         
-        this.aiTutor.saveGameHistory(history);
+        await this.aiTutor.saveGameHistory(history);
         
         // Update player patterns based on this game
         this.updatePlayerPatternsFromGame(gameData);
     }
     
-    updatePlayerPatternsFromGame(gameData) {
+    async updatePlayerPatternsFromGame(gameData) {
         // This will be called by the AI tutor during move analysis
         // but we can also do bulk pattern updates here
         const patterns = this.aiTutor.playerPatterns;
@@ -291,15 +293,15 @@ class ChessApp {
         if (!patterns.playingTimes) patterns.playingTimes = {};
         patterns.playingTimes[hour] = (patterns.playingTimes[hour] || 0) + 1;
         
-        this.aiTutor.savePlayerPatterns(patterns);
+        await this.aiTutor.savePlayerPatterns(patterns);
     }
     
-    loadPlayerProgress() {
+    async loadPlayerProgress() {
         // Load and display existing pattern insights
-        this.updatePatternInsights();
+        await this.updatePatternInsights();
         
         // Show welcome message or returning player message
-        const history = this.aiTutor.loadGameHistory();
+        const history = await this.aiTutor.loadGameHistory();
         const patterns = this.aiTutor.playerPatterns;
         
         if (history.length > 0) {
@@ -316,7 +318,7 @@ class ChessApp {
         const patternElement = document.getElementById('pattern-insights');
         if (!patternElement) return;
         
-        const history = this.aiTutor.loadGameHistory();
+        const history = await this.aiTutor.loadGameHistory();
         
         if (history.length < 2) {
             patternElement.innerHTML = '<p class="text-sm">Play more games to unlock pattern analysis!</p>';
@@ -483,7 +485,7 @@ class ChessApp {
     
     showAISettings() {
         const modal = document.getElementById('ai-settings-modal');
-        const keyInput = document.getElementById('openai-key');
+        const keyInput = document.getElementById('claude-key');
         const statusIndicator = document.getElementById('ai-status-indicator');
         
         // Show current API key status
@@ -522,7 +524,7 @@ class ChessApp {
     }
     
     saveAPIKey() {
-        const keyInput = document.getElementById('openai-key');
+        const keyInput = document.getElementById('claude-key');
         const apiKey = keyInput.value.trim();
         
         if (!apiKey) {
@@ -530,14 +532,14 @@ class ChessApp {
             return;
         }
         
-        if (!apiKey.startsWith('sk-')) {
-            this.showFeedback('API key should start with "sk-"', 'error');
+        if (!apiKey.startsWith('sk-ant-')) {
+            this.showFeedback('Claude API key should start with "sk-ant-"', 'error');
             return;
         }
         
         // Save the key
         if (window.chessConfig) {
-            const success = window.chessConfig.setOpenAIKey(apiKey);
+            const success = window.chessConfig.setClaudeKey(apiKey);
             if (success) {
                 this.showFeedback('API key saved successfully! Enhanced AI feedback is now available.', 'success');
                 this.updateAIStatus();
@@ -565,17 +567,22 @@ class ChessApp {
         const hasValidKey = window.chessConfig && window.chessConfig.hasValidApiKey();
         
         if (hasValidKey) {
-            statusIndicator.textContent = '✅ Enhanced AI active - GPT-powered analysis enabled';
+            statusIndicator.textContent = '✅ Enhanced AI active - Claude-powered analysis enabled';
             statusIndicator.className = 'status-indicator connected';
         } else {
-            statusIndicator.textContent = '⚠️ Basic AI only - Add OpenAI API key for enhanced feedback';
+            statusIndicator.textContent = '⚠️ Basic AI only - Add Claude API key for enhanced feedback';
             statusIndicator.className = 'status-indicator disconnected';
         }
     }
     
     // Advanced features for future enhancement
-    exportGameHistory() {
-        const history = this.aiTutor.loadGameHistory();
+    async exportGameHistory() {
+        if (window.userDataService) {
+            await window.userDataService.exportUserData();
+            return;
+        }
+        
+        const history = await this.aiTutor.loadGameHistory();
         const dataStr = JSON.stringify(history, null, 2);
         const dataBlob = new Blob([dataStr], {type: 'application/json'});
         
@@ -585,17 +592,27 @@ class ChessApp {
         link.click();
     }
     
-    importGameHistory(event) {
+    async importGameHistory(event) {
         const file = event.target.files[0];
         if (!file) return;
         
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
-                const history = JSON.parse(e.target.result);
-                this.aiTutor.saveGameHistory(history);
-                this.updatePatternInsights();
-                this.showFeedback('Game history imported successfully!', 'success');
+                if (window.userDataService) {
+                    const success = await window.userDataService.importUserData(e.target.result);
+                    if (success) {
+                        await this.updatePatternInsights();
+                        this.showFeedback('Game data imported successfully!', 'success');
+                    } else {
+                        this.showFeedback('Error importing game data', 'error');
+                    }
+                } else {
+                    const history = JSON.parse(e.target.result);
+                    await this.aiTutor.saveGameHistory(history);
+                    await this.updatePatternInsights();
+                    this.showFeedback('Game history imported successfully!', 'success');
+                }
             } catch (error) {
                 this.showFeedback('Error importing game history', 'error');
             }
@@ -603,8 +620,8 @@ class ChessApp {
         reader.readAsText(file);
     }
     
-    getPlayerStatistics() {
-        const history = this.aiTutor.loadGameHistory();
+    async getPlayerStatistics() {
+        const history = await this.aiTutor.loadGameHistory();
         const patterns = this.aiTutor.playerPatterns;
         
         const stats = {

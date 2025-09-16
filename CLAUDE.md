@@ -58,8 +58,16 @@ The application follows a modular class-based architecture with three main compo
 
 - `index.html` loads all JavaScript files and provides the UI structure
 - `styles.css` contains all styling including theme variables and responsive design
-- JavaScript files are loaded in order: chess-engine.js → ai-tutor.js → app.js
+- JavaScript files are loaded in order: config.js → chess-engine.js → chess-ai.js → ai-tutor.js → ai-enhanced.js → app.js
 - No external dependencies or build tools required
+
+### API Integration
+
+- **Claude API Integration**: Enhanced AI analysis using Anthropic's Claude API
+- **API Configuration**: `config.js` manages Claude API key and endpoint settings
+- **Enhanced AI Tutor**: `ai-enhanced.js` provides advanced move analysis and pattern recognition
+- **Fallback System**: Basic analysis available when no API key is provided
+- **Rate Limiting**: 6-second minimum between API requests to respect usage limits
 
 ### Development Patterns
 
