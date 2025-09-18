@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess AI Tutor • Learn Chess with AI Guidance</title>
+    <meta name="description" content="Master chess with personalized AI coaching. Real-time feedback, pattern recognition, and strategic insights to improve your game.">
+    <meta name="keywords" content="chess, AI tutor, chess training, chess strategy, chess improvement, learn chess">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♛</text></svg>">
+    <style>
+        /* Homepage specific styles */
+        .hero-section {
+            background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-primary) 100%);
+            color: white;
+            padding: var(--space-24) 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="20" opacity="0.1">♔♕♖♗♘♙</text></svg>') repeat;
+            opacity: 0.1;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 var(--space-6);
+        }
+
+        .hero-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: var(--font-weight-extrabold);
+            margin-bottom: var(--space-6);
+            line-height: var(--line-height-tight);
+        }
+
+        .hero-subtitle {
+            font-size: var(--font-size-xl);
+            margin-bottom: var(--space-8);
+            opacity: 0.9;
+            line-height: var(--line-height-relaxed);
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: var(--space-4);
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: var(--space-12);
+        }
+
+        .btn-hero {
+            padding: var(--space-4) var(--space-8);
+            font-size: var(--font-size-lg);
+            font-weight: var(--font-weight-semibold);
+            border-radius: var(--radius-xl);
+            transition: all var(--transition-base);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .btn-primary-hero {
+            background: white;
+            color: var(--color-primary);
+            border: 2px solid white;
+        }
+
+        .btn-primary-hero:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary-hero {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .btn-secondary-hero:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: white;
+        }
+
+        .features-section {
+            padding: var(--space-24) 0;
+            background: var(--color-background-subtle);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: var(--space-8);
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--space-6);
+        }
+
+        .feature-card {
+            background: var(--color-background-elevated);
+            padding: var(--space-8);
+            border-radius: var(--radius-2xl);
+            text-align: center;
+            border: 1px solid var(--color-border);
+            transition: all var(--transition-base);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--color-accent);
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            background: var(--color-accent-subtle);
+            border-radius: var(--radius-full);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto var(--space-6);
+            font-size: 2rem;
+        }
+
+        .feature-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-bold);
+            margin-bottom: var(--space-4);
+            color: var(--color-foreground);
+        }
+
+        .feature-description {
+            color: var(--color-foreground-muted);
+            line-height: var(--line-height-relaxed);
+        }
+
+        .stats-section {
+            padding: var(--space-20) 0;
+            background: var(--color-primary);
+            color: white;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-8);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 var(--space-6);
+        }
+
+        .stat-item {
+            padding: var(--space-6);
+        }
+
+        .stat-number {
+            font-size: var(--font-size-4xl);
+            font-weight: var(--font-weight-extrabold);
+            display: block;
+            margin-bottom: var(--space-2);
+        }
+
+        .stat-label {
+            font-size: var(--font-size-base);
+            opacity: 0.9;
+        }
+
+        .cta-section {
+            padding: var(--space-24) 0;
+            background: var(--color-background);
+            text-align: center;
+        }
+
+        .cta-content {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 var(--space-6);
+        }
+
+        .cta-title {
+            font-size: var(--font-size-3xl);
+            font-weight: var(--font-weight-bold);
+            margin-bottom: var(--space-6);
+            color: var(--color-foreground);
+        }
+
+        .cta-description {
+            font-size: var(--font-size-lg);
+            color: var(--color-foreground-muted);
+            margin-bottom: var(--space-8);
+            line-height: var(--line-height-relaxed);
+        }
+
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: var(--space-16) 0;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .btn-hero {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>Chess AI Tutor</h1>
+                </div>
+                <nav>
+                    <button id="theme-toggle" class="btn btn-ghost btn-icon" aria-label="Toggle theme">
+                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                        </svg>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Master Chess with AI Guidance</h1>
+            <p class="hero-subtitle">Get real-time feedback, pattern recognition, and personalized coaching to elevate your chess game to the next level.</p>
+            
+            <div class="cta-buttons">
+                <a href="index.html" class="btn-hero btn-primary-hero">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Start Playing Now
+                </a>
+                <a href="#features" class="btn-hero btn-secondary-hero">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Learn More
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="container">
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🧠</div>
+                    <h3 class="feature-title">AI-Powered Analysis</h3>
+                    <p class="feature-description">Get instant feedback on every move with advanced AI analysis powered by Claude. Learn from your mistakes and discover better strategies.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3 class="feature-title">Pattern Recognition</h3>
+                    <p class="feature-description">Our AI identifies your playing patterns, strengths, and weaknesses to provide personalized improvement recommendations.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3 class="feature-title">Adaptive Difficulty</h3>
+                    <p class="feature-description">Play against an AI opponent that adapts to your skill level, providing the perfect challenge for continuous improvement.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📚</div>
+                    <h3 class="feature-title">Opening Database</h3>
+                    <p class="feature-description">Learn from a comprehensive opening book with thousands of proven chess openings and variations.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3 class="feature-title">Cross-Platform</h3>
+                    <p class="feature-description">Play anywhere with our responsive design that works perfectly on desktop, tablet, and mobile devices.</p>
+                </div>
+                
+                <div class="feature-card">
+                    <div class="feature-icon">☁️</div>
+                    <h3 class="feature-title">Cloud Sync</h3>
+                    <p class="feature-description">Your games and progress are automatically saved and synced across all your devices with optional account creation.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <span class="stat-number">10K+</span>
+                    <span class="stat-label">Games Analyzed</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">95%</span>
+                    <span class="stat-label">Improvement Rate</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">24/7</span>
+                    <span class="stat-label">AI Availability</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">1000+</span>
+                    <span class="stat-label">Opening Variations</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="cta-section">
+        <div class="cta-content">
+            <h2 class="cta-title">Ready to Improve Your Chess?</h2>
+            <p class="cta-description">Join thousands of players who have improved their game with AI-powered coaching. Start your chess journey today!</p>
+            <a href="index.html" class="btn btn-primary btn-hero">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+                Start Your Free Session
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="background: var(--color-background-muted); padding: var(--space-12) 0; text-align: center; border-top: 1px solid var(--color-border);">
+        <div class="container">
+            <p style="color: var(--color-foreground-muted); margin-bottom: var(--space-4);">
+                © 2024 Chess AI Tutor. Elevating chess players worldwide with AI-powered coaching.
+            </p>
+            <p style="color: var(--color-foreground-subtle); font-size: var(--font-size-sm);">
+                Built with ♟️ for chess enthusiasts everywhere
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Theme toggle functionality
+        document.getElementById('theme-toggle').addEventListener('click', function() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('chess-theme', newTheme);
+            
+            // Update icon
+            const svg = this.querySelector('svg');
+            if (newTheme === 'dark') {
+                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>';
+            } else {
+                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>';
+            }
+        });
+
+        // Initialize theme
+        const savedTheme = localStorage.getItem('chess-theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add fade-in animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe feature cards
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>
