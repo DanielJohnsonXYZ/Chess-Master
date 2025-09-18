@@ -1001,3 +1001,14 @@ body {
 .btn-full {
   width: 100%;
 }
+
+/* AI Feedback Styling */
+.feedback-learning {
+  background-color: var(--color-accent-subtle) !important;
+  color: var(--color-foreground) !important;
+}
+
+[data-theme="dark"] .feedback-learning {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: var(--color-foreground) !important;
+}

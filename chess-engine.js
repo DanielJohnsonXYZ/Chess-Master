@@ -414,8 +414,8 @@ class ChessEngine {
                     </div>
                 ` : ''}
                 ${analysis.learningPoint && analysis.learningPoint !== 'undefined' ? `
-                    <div class="feedback-learning" style="margin-top: 16px; padding: 12px; background-color: var(--color-accent-subtle); border-radius: 8px; font-size: 0.875rem; border-left: 4px solid var(--color-accent);">
-                        <strong>🎓 Learning Point:</strong> ${analysis.learningPoint}
+                    <div class="feedback-learning" style="margin-top: 16px; padding: 12px; background-color: var(--color-accent-subtle); border-radius: 8px; font-size: 0.875rem; border-left: 4px solid var(--color-accent); color: var(--color-foreground);">
+                        <strong style="color: var(--color-foreground);">🎓 Learning Point:</strong> ${analysis.learningPoint}
                     </div>
                 ` : ''}
             </div>
