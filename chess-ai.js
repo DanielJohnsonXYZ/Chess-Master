@@ -309,13 +309,18 @@ class ChessAI {
     // Generate move notation for history
     getMoveNotation(move, piece, captured) {
         const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-        const fromSquare = files[move.fromCol] + (8 - move.fromRow);
         const toSquare = files[move.toCol] + (8 - move.toRow);
         
         const pieceSymbol = piece.type === 'pawn' ? '' : piece.type.charAt(0).toUpperCase();
         const captureSymbol = captured ? 'x' : '';
         
-        return `${pieceSymbol}${fromSquare}${captureSymbol}${toSquare}`;
+        // For pawns, include file letter if capturing
+        if (piece.type === 'pawn' && captured) {
+            const fromFile = files[move.fromCol];
+            return `${fromFile}${captureSymbol}${toSquare}`;
+        }
+        
+        return `${pieceSymbol}${captureSymbol}${toSquare}`;
     }
     
     // Get opening book move if available

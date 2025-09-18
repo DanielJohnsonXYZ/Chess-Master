@@ -389,33 +389,33 @@ class ChessEngine {
         
         const feedbackHtml = `
             <div class="ai-feedback">
-                <div class="feedback-rating" style="color: ${ratingColor}; font-weight: 600; margin-bottom: 8px;">
-                    ${analysis.rating.toUpperCase()} MOVE
+                <div class="feedback-rating" style="color: ${ratingColor}; font-weight: 600; margin-bottom: 12px; padding: 8px; background-color: rgba(${ratingColor === '#22c55e' ? '34, 197, 94' : ratingColor === '#3b82f6' ? '59, 130, 246' : ratingColor === '#f59e0b' ? '245, 158, 11' : ratingColor === '#ef4444' ? '239, 68, 68' : '107, 114, 128'}, 0.1); border-radius: 6px; text-align: center;">
+                    ${analysis.rating ? analysis.rating.toUpperCase() : 'OKAY'} MOVE
                 </div>
-                <div class="feedback-main" style="margin-bottom: 12px;">
-                    <strong>${analysis.feedback}</strong>
+                <div class="feedback-main" style="margin-bottom: 16px; line-height: 1.5;">
+                    ${analysis.feedback || analysis.mainFeedback || 'Move analyzed successfully.'}
                 </div>
-                ${analysis.tacticalAnalysis ? `
-                    <div class="feedback-tactical" style="margin-bottom: 8px; font-size: 0.875rem;">
-                        <strong>Tactical:</strong> ${analysis.tacticalAnalysis}
+                ${analysis.tacticalAnalysis && analysis.tacticalAnalysis !== 'undefined' ? `
+                    <div class="feedback-tactical" style="margin-bottom: 12px; font-size: 0.875rem; padding: 8px; background-color: var(--color-background-subtle); border-radius: 6px;">
+                        <strong>🎯 Tactical:</strong> ${analysis.tacticalAnalysis}
                     </div>
                 ` : ''}
-                ${analysis.strategicAnalysis ? `
-                    <div class="feedback-strategic" style="margin-bottom: 8px; font-size: 0.875rem;">
-                        <strong>Strategic:</strong> ${analysis.strategicAnalysis}
+                ${analysis.strategicAnalysis && analysis.strategicAnalysis !== 'undefined' ? `
+                    <div class="feedback-strategic" style="margin-bottom: 12px; font-size: 0.875rem; padding: 8px; background-color: var(--color-background-subtle); border-radius: 6px;">
+                        <strong>📋 Strategic:</strong> ${analysis.strategicAnalysis}
                     </div>
                 ` : ''}
                 ${analysis.suggestions && analysis.suggestions.length > 0 ? `
-                    <div class="feedback-suggestions" style="margin-top: 12px;">
-                        <strong>Suggestions:</strong>
-                        <ul style="margin: 4px 0 0 20px; font-size: 0.875rem;">
-                            ${analysis.suggestions.map(s => `<li>${s}</li>`).join('')}
+                    <div class="feedback-suggestions" style="margin-top: 16px;">
+                        <strong style="color: var(--color-accent);">💡 Suggestions:</strong>
+                        <ul style="margin: 8px 0 0 20px; font-size: 0.875rem; line-height: 1.6;">
+                            ${analysis.suggestions.map(s => `<li style="margin-bottom: 4px;">${s}</li>`).join('')}
                         </ul>
                     </div>
                 ` : ''}
-                ${analysis.learningPoint ? `
-                    <div class="feedback-learning" style="margin-top: 12px; padding: 8px; background-color: var(--color-accent-subtle); border-radius: 6px; font-size: 0.875rem;">
-                        <strong>💡 Learning Point:</strong> ${analysis.learningPoint}
+                ${analysis.learningPoint && analysis.learningPoint !== 'undefined' ? `
+                    <div class="feedback-learning" style="margin-top: 16px; padding: 12px; background-color: var(--color-accent-subtle); border-radius: 8px; font-size: 0.875rem; border-left: 4px solid var(--color-accent);">
+                        <strong>🎓 Learning Point:</strong> ${analysis.learningPoint}
                     </div>
                 ` : ''}
             </div>
@@ -480,11 +480,16 @@ class ChessEngine {
     getMoveNotation(move) {
         const pieceSymbol = move.piece.type === 'pawn' ? '' : 
             move.piece.type.charAt(0).toUpperCase();
-        const fromSquare = this.getSquareNotation(move.from[0], move.from[1]);
         const toSquare = this.getSquareNotation(move.to[0], move.to[1]);
-        const capture = move.captured ? 'x' : '-';
+        const capture = move.captured ? 'x' : '';
         
-        return `${pieceSymbol}${fromSquare}${capture}${toSquare}`;
+        // For pawns, include file letter if capturing
+        if (move.piece.type === 'pawn' && move.captured) {
+            const fromFile = String.fromCharCode(97 + move.from[1]);
+            return `${fromFile}${capture}${toSquare}`;
+        }
+        
+        return `${pieceSymbol}${capture}${toSquare}`;
     }
     
     getSquareNotation(row, col) {
