@@ -51,8 +51,10 @@ class AITutor {
                 throw new Error('No move provided for analysis');
             }
             
-            // Validate move object
-            window.validator.validateMove(move);
+            // Validate move object if validator is available
+            if (window.validator) {
+                window.validator.validateMove(move);
+            }
             
             // Try Stockfish analysis first, fallback to basic analysis
             let analysis;
@@ -72,7 +74,11 @@ class AITutor {
             this.updatePlayerPatterns(move, analysis);
             
         } catch (error) {
-            window.errorHandler.handleError(error, 'Move Analysis', { notify: false });
+            if (window.errorHandler) {
+                window.errorHandler.handleError(error, 'Move Analysis', { notify: false });
+            } else {
+                console.error('Move analysis error:', error);
+            }
         }
     }
     
@@ -447,13 +453,10 @@ class AITutor {
     }
     
     displayFeedback(feedback) {
-        const feedbackElement = window.performanceOptimizer.getElement('tutor-feedback');
+        const feedbackElement = document.getElementById('tutor-feedback');
         if (!feedbackElement) return;
         
         try {
-            // Clear existing content
-            feedbackElement.innerHTML = '';
-            
             const ratingColors = {
                 excellent: '#48bb78',
                 good: '#68d391',
@@ -462,125 +465,67 @@ class AITutor {
                 poor: '#fc8181'
             };
             
-            // Create feedback item container
-            const feedbackItem = window.domHelper.createElement('div', {
-                className: 'feedback-item'
-            });
+            // Build feedback HTML safely
+            let feedbackHtml = `<div class="feedback-item">`;
             
-            // Create rating section
-            const ratingSection = window.domHelper.createElement('div', {
-                className: 'move-rating',
-                style: `color: ${ratingColors[feedback.rating]}; font-weight: bold; display: flex; align-items: center; gap: 8px;`
-            });
+            // Rating section
+            feedbackHtml += `
+                <div class="move-rating" style="color: ${ratingColors[feedback.rating]}; font-weight: bold; display: flex; align-items: center; gap: 8px;">
+                    <span>Rating: ${feedback.rating.toUpperCase()}</span>
+                    ${feedback.type === 'stockfish' ? '<span style="font-size: 0.75em; background: #4a5568; color: white; padding: 2px 6px; border-radius: 4px;">STOCKFISH</span>' : ''}
+                </div>
+            `;
             
-            const ratingText = window.domHelper.createElement('span', {
-                textContent: `Rating: ${feedback.rating.toUpperCase()}`
-            });
-            ratingSection.appendChild(ratingText);
-            
-            if (feedback.type === 'stockfish') {
-                const stockfishBadge = window.domHelper.createElement('span', {
-                    textContent: 'STOCKFISH',
-                    style: 'font-size: 0.75em; background: #4a5568; color: white; padding: 2px 6px; border-radius: 4px;'
-                });
-                ratingSection.appendChild(stockfishBadge);
-            }
-            
-            feedbackItem.appendChild(ratingSection);
-            
-            // Create Stockfish analysis section if available
+            // Stockfish analysis section
             if (feedback.stockfishData) {
-                const analysisSection = window.domHelper.createElement('div', {
-                    className: 'stockfish-analysis',
-                    style: 'margin: 8px 0; padding: 8px; background: #f7fafc; border-radius: 6px; font-size: 0.875em;'
-                });
-                
-                const qualityRow = window.domHelper.createElement('div', {
-                    style: 'display: flex; justify-content: space-between; margin-bottom: 4px;'
-                });
-                
-                const qualityText = window.domHelper.createElement('span');
-                qualityText.innerHTML = `<strong>Move Quality:</strong> ${feedback.stockfishData.score}/100`;
-                
-                const evalChangeText = window.domHelper.createElement('span');
                 const evalChange = feedback.evalChange ? 
                     (feedback.evalChange > 0 ? '+' : '') + feedback.evalChange.toFixed(2) : 'N/A';
-                evalChangeText.innerHTML = `<strong>Eval Change:</strong> ${evalChange}`;
-                
-                qualityRow.appendChild(qualityText);
-                qualityRow.appendChild(evalChangeText);
-                analysisSection.appendChild(qualityRow);
-                
-                const evalRow = window.domHelper.createElement('div', {
-                    style: 'font-size: 0.8em; color: #718096;'
-                });
-                
                 const beforeEval = window.ChessUtils?.formatEvaluation(feedback.stockfishData.beforeEval)?.score || 'N/A';
                 const afterEval = window.ChessUtils?.formatEvaluation(feedback.stockfishData.afterEval)?.score || 'N/A';
-                evalRow.innerHTML = `<strong>Before:</strong> ${beforeEval} → <strong>After:</strong> ${afterEval}`;
                 
-                analysisSection.appendChild(evalRow);
-                feedbackItem.appendChild(analysisSection);
+                feedbackHtml += `
+                    <div class="stockfish-analysis" style="margin: 8px 0; padding: 8px; background: #f7fafc; border-radius: 6px; font-size: 0.875em;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span><strong>Move Quality:</strong> ${feedback.stockfishData.score}/100</span>
+                            <span><strong>Eval Change:</strong> ${evalChange}</span>
+                        </div>
+                        <div style="font-size: 0.8em; color: #718096;">
+                            <strong>Before:</strong> ${beforeEval} → <strong>After:</strong> ${afterEval}
+                        </div>
+                    </div>
+                `;
             }
             
-            // Create main feedback message
-            const mainFeedback = window.domHelper.createElement('p', {
-                className: 'main-feedback',
-                textContent: feedback.mainMessage
-            });
-            feedbackItem.appendChild(mainFeedback);
+            // Main feedback message (escaped)
+            const mainMessage = feedback.mainMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            feedbackHtml += `<p class="main-feedback">${mainMessage}</p>`;
             
-            // Create suggestions section
+            // Suggestions section
             if (feedback.suggestions && feedback.suggestions.length > 0) {
-                const suggestionsSection = window.domHelper.createElement('div', {
-                    className: 'suggestions'
-                });
-                
-                const suggestionsTitle = window.domHelper.createElement('strong', {
-                    textContent: 'Suggestions:'
-                });
-                suggestionsSection.appendChild(suggestionsTitle);
-                
-                const suggestionsList = window.domHelper.createElement('ul');
+                feedbackHtml += `<div class="suggestions"><strong>Suggestions:</strong><ul>`;
                 feedback.suggestions.forEach(suggestion => {
-                    const listItem = window.domHelper.createElement('li', {
-                        textContent: suggestion
-                    });
-                    suggestionsList.appendChild(listItem);
+                    const escapedSuggestion = suggestion.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    feedbackHtml += `<li>${escapedSuggestion}</li>`;
                 });
-                
-                suggestionsSection.appendChild(suggestionsList);
-                feedbackItem.appendChild(suggestionsSection);
+                feedbackHtml += `</ul></div>`;
             }
             
-            // Create principles section
+            // Principles section
             if (feedback.principles && feedback.principles.length > 0) {
-                const principlesSection = window.domHelper.createElement('div', {
-                    className: 'principles'
-                });
-                
-                const principlesTitle = window.domHelper.createElement('strong', {
-                    textContent: 'Remember:'
-                });
-                principlesSection.appendChild(principlesTitle);
-                
-                const principlesList = window.domHelper.createElement('ul');
+                feedbackHtml += `<div class="principles"><strong>Remember:</strong><ul>`;
                 feedback.principles.forEach(principle => {
-                    const listItem = window.domHelper.createElement('li', {
-                        textContent: principle
-                    });
-                    principlesList.appendChild(listItem);
+                    const escapedPrinciple = principle.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    feedbackHtml += `<li>${escapedPrinciple}</li>`;
                 });
-                
-                principlesSection.appendChild(principlesList);
-                feedbackItem.appendChild(principlesSection);
+                feedbackHtml += `</ul></div>`;
             }
             
-            feedbackElement.appendChild(feedbackItem);
+            feedbackHtml += `</div>`;
+            feedbackElement.innerHTML = feedbackHtml;
             
         } catch (error) {
-            window.errorHandler.handleError(error, 'AI Tutor Display');
-            feedbackElement.textContent = 'Error displaying feedback. Please try again.';
+            console.error('Error displaying feedback:', error);
+            feedbackElement.innerHTML = '<p>Error displaying feedback. Please try again.</p>';
         }
     }
     
@@ -702,9 +647,15 @@ class AITutor {
                 return await window.userDataService.loadGameHistory();
             }
             
-            return window.storageHelper.get('chessAITutorHistory', []);
+            if (window.storageHelper) {
+                return window.storageHelper.get('chessAITutorHistory', []);
+            }
+            
+            // Fallback to direct localStorage
+            const stored = localStorage.getItem('chessAITutorHistory');
+            return stored ? JSON.parse(stored) : [];
         } catch (error) {
-            window.errorHandler.handleError(error, 'Game History Load', { notify: false });
+            console.error('Error loading game history:', error);
             return [];
         }
     }
@@ -713,11 +664,14 @@ class AITutor {
         try {
             if (window.userDataService) {
                 await window.userDataService.saveGameHistory(history);
-            } else {
+            } else if (window.storageHelper) {
                 window.storageHelper.set('chessAITutorHistory', history);
+            } else {
+                // Fallback to direct localStorage
+                localStorage.setItem('chessAITutorHistory', JSON.stringify(history));
             }
         } catch (error) {
-            window.errorHandler.handleError(error, 'Game History Save');
+            console.error('Error saving game history:', error);
         }
     }
     
@@ -727,9 +681,15 @@ class AITutor {
                 return await window.userDataService.loadPlayerPatterns();
             }
             
-            return window.storageHelper.get('chessAITutorPatterns', {});
+            if (window.storageHelper) {
+                return window.storageHelper.get('chessAITutorPatterns', {});
+            }
+            
+            // Fallback to direct localStorage
+            const stored = localStorage.getItem('chessAITutorPatterns');
+            return stored ? JSON.parse(stored) : {};
         } catch (error) {
-            window.errorHandler.handleError(error, 'Player Patterns Load', { notify: false });
+            console.error('Error loading player patterns:', error);
             return {};
         }
     }
@@ -738,12 +698,15 @@ class AITutor {
         try {
             if (window.userDataService) {
                 await window.userDataService.savePlayerPatterns(patterns);
-            } else {
+            } else if (window.storageHelper) {
                 window.storageHelper.set('chessAITutorPatterns', patterns);
+            } else {
+                // Fallback to direct localStorage
+                localStorage.setItem('chessAITutorPatterns', JSON.stringify(patterns));
             }
             this.playerPatterns = patterns;
         } catch (error) {
-            window.errorHandler.handleError(error, 'Player Patterns Save');
+            console.error('Error saving player patterns:', error);
         }
     }
     

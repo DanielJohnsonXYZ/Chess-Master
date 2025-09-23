@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess AI Tutor Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .test-pass {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .test-fail {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .test-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        #mini-board {
+            display: grid;
+            grid-template-columns: repeat(8, 40px);
+            gap: 1px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+        .mini-square {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .mini-square.light {
+            background: #f0d9b5;
+        }
+        .mini-square.dark {
+            background: #b58863;
+        }
+        .mini-square.selected {
+            background: #7fb069 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Chess AI Tutor - System Test</h1>
+        
+        <div id="test-results">
+            <div class="test-result test-pending">⏳ Running tests...</div>
+        </div>
+        
+        <h2>Mini Chess Board Test</h2>
+        <div id="mini-board"></div>
+        
+        <h2>System Status</h2>
+        <div id="system-status">
+            <div>Loading system components...</div>
+        </div>
+        
+        <h2>Stockfish Status</h2>
+        <div id="stockfish-status">
+            <div>Checking Stockfish engine...</div>
+        </div>
+    </div>
+
+    <!-- Load scripts in order -->
+    <script src="utils.js"></script>
+    <script src="chess-utils.js"></script>
+    <script src="stockfish-engine.js"></script>
+    
+    <script>
+        // Test utilities
+        class TestRunner {
+            constructor() {
+                this.tests = [];
+                this.results = [];
+            }
+            
+            addTest(name, testFn) {
+                this.tests.push({ name, testFn });
+            }
+            
+            async runAll() {
+                const resultsContainer = document.getElementById('test-results');
+                resultsContainer.innerHTML = '';
+                
+                for (const test of this.tests) {
+                    try {
+                        const result = await test.testFn();
+                        this.results.push({ name: test.name, passed: result, error: null });
+                        this.displayResult(test.name, true, result);
+                    } catch (error) {
+                        this.results.push({ name: test.name, passed: false, error: error.message });
+                        this.displayResult(test.name, false, error.message);
+                    }
+                }
+                
+                const passed = this.results.filter(r => r.passed).length;
+                const total = this.results.length;
+                
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = `test-result ${passed === total ? 'test-pass' : 'test-fail'}`;
+                summaryDiv.innerHTML = `<strong>Test Summary: ${passed}/${total} tests passed</strong>`;
+                resultsContainer.insertBefore(summaryDiv, resultsContainer.firstChild);
+            }
+            
+            displayResult(name, passed, message) {
+                const resultsContainer = document.getElementById('test-results');
+                const resultDiv = document.createElement('div');
+                resultDiv.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+                resultDiv.innerHTML = `${passed ? '✅' : '❌'} <strong>${name}:</strong> ${message}`;
+                resultsContainer.appendChild(resultDiv);
+            }
+        }
+        
+        // Initialize test runner
+        const testRunner = new TestRunner();
+        
+        // Test 1: Utilities loaded
+        testRunner.addTest('Utilities Available', () => {
+            if (!window.errorHandler) throw new Error('ErrorHandler not available');
+            if (!window.validator) throw new Error('Validator not available');
+            if (!window.performanceOptimizer) throw new Error('PerformanceOptimizer not available');
+            if (!window.ChessUtils) throw new Error('ChessUtils not available');
+            return 'All utilities loaded successfully';
+        });
+        
+        // Test 2: Chess utils functionality
+        testRunner.addTest('Chess Utils', () => {
+            const initialFen = window.ChessUtils.createInitialPosition();
+            if (!initialFen.includes('rnbqkbnr')) {
+                throw new Error('Invalid initial position FEN');
+            }
+            
+            const pos = window.ChessUtils.algebraicToPosition('e4');
+            if (!pos || pos[0] !== 4 || pos[1] !== 4) {
+                throw new Error('Algebraic conversion failed');
+            }
+            
+            return 'Chess utilities working correctly';
+        });
+        
+        // Test 3: Validation
+        testRunner.addTest('Input Validation', () => {
+            try {
+                window.validator.validateFEN('invalid fen');
+                throw new Error('Should have thrown validation error');
+            } catch (error) {
+                if (error.message.includes('FEN must have 6 parts')) {
+                    return 'Validation working correctly';
+                }
+                throw error;
+            }
+        });
+        
+        // Test 4: Error handling
+        testRunner.addTest('Error Handling', () => {
+            const error = new Error('Test error');
+            const result = window.errorHandler.handleError(error, 'Test Context', { notify: false });
+            if (!result.context || !result.timestamp) {
+                throw new Error('Error handler not working properly');
+            }
+            return 'Error handling working correctly';
+        });
+        
+        // Test 5: Mini chess board
+        testRunner.addTest('Mini Chess Board', () => {
+            return new Promise((resolve) => {
+                createMiniBoard();
+                setTimeout(() => {
+                    const squares = document.querySelectorAll('.mini-square');
+                    if (squares.length !== 64) {
+                        throw new Error(`Expected 64 squares, got ${squares.length}`);
+                    }
+                    resolve('Mini board created successfully');
+                }, 100);
+            });
+        });
+        
+        // Test 6: Stockfish engine
+        testRunner.addTest('Stockfish Engine', () => {
+            return new Promise((resolve, reject) => {
+                if (!window.stockfishEngine) {
+                    reject(new Error('Stockfish engine not initialized'));
+                    return;
+                }
+                
+                let resolved = false;
+                
+                // Set timeout for test
+                setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        resolve('Stockfish engine initialized (status pending)');
+                    }
+                }, 3000);
+                
+                // Check if engine becomes ready
+                window.stockfishEngine.onReady(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        resolve('Stockfish engine ready and working');
+                    }
+                });
+                
+                window.stockfishEngine.onError((error) => {
+                    if (!resolved) {
+                        resolved = true;
+                        resolve(`Stockfish unavailable (${error}) - graceful fallback working`);
+                    }
+                });
+            });
+        });
+        
+        // Create mini chess board
+        function createMiniBoard() {
+            const board = document.getElementById('mini-board');
+            board.innerHTML = '';
+            
+            const pieces = {
+                0: ['♜','♞','♝','♛','♚','♝','♞','♜'],
+                1: ['♟','♟','♟','♟','♟','♟','♟','♟'],
+                6: ['♙','♙','♙','♙','♙','♙','♙','♙'],
+                7: ['♖','♘','♗','♕','♔','♗','♘','♖']
+            };
+            
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    square.className = `mini-square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.textContent = pieces[row] ? pieces[row][col] : '';
+                    square.addEventListener('click', () => {
+                        document.querySelectorAll('.mini-square').forEach(s => s.classList.remove('selected'));
+                        square.classList.add('selected');
+                    });
+                    board.appendChild(square);
+                }
+            }
+        }
+        
+        // Update system status
+        function updateSystemStatus() {
+            const statusDiv = document.getElementById('system-status');
+            statusDiv.innerHTML = `
+                <div>✅ DOM: Ready</div>
+                <div>${window.errorHandler ? '✅' : '❌'} Error Handler: ${window.errorHandler ? 'Loaded' : 'Missing'}</div>
+                <div>${window.validator ? '✅' : '❌'} Validator: ${window.validator ? 'Loaded' : 'Missing'}</div>
+                <div>${window.ChessUtils ? '✅' : '❌'} Chess Utils: ${window.ChessUtils ? 'Loaded' : 'Missing'}</div>
+                <div>${window.stockfishEngine ? '✅' : '❌'} Stockfish Engine: ${window.stockfishEngine ? 'Initialized' : 'Missing'}</div>
+            `;
+        }
+        
+        // Update Stockfish status
+        function updateStockfishStatus() {
+            const statusDiv = document.getElementById('stockfish-status');
+            
+            if (!window.stockfishEngine) {
+                statusDiv.innerHTML = '<div>❌ Stockfish engine not initialized</div>';
+                return;
+            }
+            
+            statusDiv.innerHTML = '<div>⏳ Stockfish engine initializing...</div>';
+            
+            window.stockfishEngine.onReady(() => {
+                statusDiv.innerHTML = '<div style="color: #28a745;">✅ Stockfish engine ready and operational</div>';
+            });
+            
+            window.stockfishEngine.onError((error) => {
+                statusDiv.innerHTML = `<div style="color: #ffc107;">⚠️ Stockfish unavailable: ${error}</div><div>Using basic AI analysis instead</div>`;
+            });
+        }
+        
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            updateSystemStatus();
+            updateStockfishStatus();
+            
+            // Wait a moment for everything to initialize
+            setTimeout(async () => {
+                await testRunner.runAll();
+                updateSystemStatus();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

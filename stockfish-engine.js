@@ -25,23 +25,23 @@ class StockfishEngine {
             
             for (const src of stockfishSources) {
                 try {
-                    await window.asyncHelper.withTimeout(
-                        this.loadStockfishScript(src),
-                        10000 // 10 second timeout
-                    );
+                    // Use timeout with fallback if asyncHelper not available
+                    const loadPromise = this.loadStockfishScript(src);
+                    const timeoutPromise = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('Load timeout')), 10000);
+                    });
+                    
+                    await Promise.race([loadPromise, timeoutPromise]);
                     this.loadEngine(src);
                     return;
                 } catch (error) {
-                    window.errorHandler.handleError(error, 'Stockfish Load', {
-                        notify: false,
-                        logLevel: 'warn'
-                    });
+                    console.warn(`Failed to load Stockfish from ${src}:`, error);
                 }
             }
             
             throw new Error('All Stockfish sources failed to load');
         } catch (error) {
-            window.errorHandler.handleError(error, 'Stockfish engine');
+            console.error('Error initializing Stockfish:', error);
             this.callbacks.onError?.(error.message);
         }
     }
@@ -252,7 +252,7 @@ class StockfishEngine {
             const quality = this.calculateMoveQuality(beforeEval, afterEval);
             return quality;
         } catch (error) {
-            window.errorHandler.handleError(error, 'Stockfish Move Quality');
+            console.error('Stockfish move quality error:', error);
             throw error;
         }
     }
@@ -356,31 +356,35 @@ document.addEventListener('DOMContentLoaded', () => {
         window.stockfishEngine.onReady(() => {
             console.log('Stockfish engine ready - Enhanced AI analysis available');
             // Update status indicator
-            const statusText = document.getElementById('stockfish-status-text');
-            if (statusText) {
-                statusText.textContent = 'Ready';
-                statusText.style.color = '#48bb78';
-            }
-            // Show user notification that Stockfish is available
-            if (document.getElementById('tutor-feedback')) {
+            setTimeout(() => {
+                const statusText = document.getElementById('stockfish-status-text');
+                if (statusText) {
+                    statusText.textContent = 'Ready';
+                    statusText.style.color = '#48bb78';
+                }
+                // Show user notification that Stockfish is available
                 const feedbackElement = document.getElementById('tutor-feedback');
-                feedbackElement.innerHTML = '<p style="color: #48bb78; font-weight: bold;">🔥 Stockfish engine loaded! You\'ll now receive enhanced AI analysis.</p>';
-            }
+                if (feedbackElement) {
+                    feedbackElement.innerHTML = '<p style="color: #48bb78; font-weight: bold;">🔥 Stockfish engine loaded! You\'ll now receive enhanced AI analysis.</p>';
+                }
+            }, 100);
         });
 
         window.stockfishEngine.onError((error) => {
             console.warn('Stockfish engine unavailable, using basic analysis:', error);
             // Update status indicator
-            const statusText = document.getElementById('stockfish-status-text');
-            if (statusText) {
-                statusText.textContent = 'Unavailable';
-                statusText.style.color = '#f59e0b';
-            }
-            // Graceful fallback - don't show error to user, just use basic analysis
-            if (document.getElementById('tutor-feedback')) {
+            setTimeout(() => {
+                const statusText = document.getElementById('stockfish-status-text');
+                if (statusText) {
+                    statusText.textContent = 'Unavailable';
+                    statusText.style.color = '#f59e0b';
+                }
+                // Graceful fallback - don't show error to user, just use basic analysis
                 const feedbackElement = document.getElementById('tutor-feedback');
-                feedbackElement.innerHTML = '<p>Welcome! Basic AI analysis is available. Make your first move to begin receiving guidance.</p>';
-            }
+                if (feedbackElement) {
+                    feedbackElement.innerHTML = '<p>Welcome! Basic AI analysis is available. Make your first move to begin receiving guidance.</p>';
+                }
+            }, 100);
         });
     }
 });
