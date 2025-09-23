@@ -100,6 +100,13 @@
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-bounce: 300ms cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  
+  /* Enhanced Animations */
+  --animation-fade-in: fadeIn 300ms ease-out;
+  --animation-slide-up: slideUp 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-scale-in: scaleIn 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-pulse: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 /* Dark Theme */
@@ -1011,4 +1018,270 @@ body {
 [data-theme="dark"] .feedback-learning {
   background-color: rgba(59, 130, 246, 0.15) !important;
   color: var(--color-foreground) !important;
+}
+
+/* Enhanced Animations and Micro-interactions */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+/* Enhanced Feedback Panel Animations */
+.feedback-item {
+  animation: var(--animation-fade-in);
+}
+
+.move-rating {
+  animation: var(--animation-scale-in);
+}
+
+.stockfish-analysis {
+  animation: var(--animation-slide-up);
+  animation-delay: 100ms;
+  animation-fill-mode: both;
+}
+
+/* Enhanced Chess Board Interactions */
+.square {
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.square:hover {
+  background-color: rgba(59, 130, 246, 0.1);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.square.selected {
+  background-color: rgba(59, 130, 246, 0.3) !important;
+  transform: scale(1.02);
+  box-shadow: var(--shadow-md);
+  animation: var(--animation-scale-in);
+}
+
+.square.possible-move {
+  background-color: rgba(34, 197, 94, 0.2) !important;
+  animation: var(--animation-pulse);
+}
+
+.square.possible-move::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background-color: var(--color-success);
+  border-radius: var(--radius-full);
+  opacity: 0.8;
+}
+
+/* Enhanced Button Interactions */
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:active {
+  transform: translateY(0);
+  transition: all var(--transition-fast);
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+  transform: translate(-50%, -50%);
+  transition: width var(--transition-base), height var(--transition-base);
+}
+
+.btn:hover::before {
+  width: 100%;
+  height: 100%;
+}
+
+/* Enhanced Panel Animations */
+.panel {
+  animation: var(--animation-fade-in);
+}
+
+.panel:nth-child(2) {
+  animation-delay: 100ms;
+  animation-fill-mode: both;
+}
+
+.panel:nth-child(3) {
+  animation-delay: 200ms;
+  animation-fill-mode: both;
+}
+
+/* Loading States */
+.loading {
+  background: linear-gradient(90deg, 
+    var(--color-background-subtle) 0%, 
+    var(--color-border-muted) 50%, 
+    var(--color-background-subtle) 100%);
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Enhanced Modal Animations */
+.modal {
+  animation: var(--animation-fade-in);
+}
+
+.modal-content {
+  animation: var(--animation-scale-in);
+  animation-delay: 50ms;
+  animation-fill-mode: both;
+}
+
+/* Status Indicators with Animations */
+.status-indicator {
+  transition: all var(--transition-base);
+}
+
+.status-indicator.connected {
+  animation: var(--animation-pulse);
+}
+
+/* Enhanced Form Interactions */
+.form-input {
+  transition: all var(--transition-base);
+}
+
+.form-input:focus {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Tooltip Enhancements */
+[title] {
+  position: relative;
+}
+
+[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-foreground);
+  color: var(--color-background);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  white-space: nowrap;
+  z-index: 1000;
+  animation: var(--animation-fade-in);
+}
+
+/* Enhanced Progress Indicators */
+.progress-bar {
+  height: 4px;
+  background: var(--color-border-muted);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+  transition: width var(--transition-slow);
+}
+
+/* Accessibility Enhancements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Focus Indicators */
+.btn:focus-visible,
+.form-input:focus-visible,
+.square:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }

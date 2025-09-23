@@ -88,8 +88,10 @@ class ChessEngine {
                 this.clearSelection();
                 this.updateGameInfo();
                 
-                // Trigger AI feedback
-                window.aiTutor?.analyzeMoveAndProvideFeedback(this.moveHistory[this.moveHistory.length - 1]);
+                // Trigger AI feedback (async)
+                if (window.aiTutor) {
+                    window.aiTutor.analyzeMoveAndProvideFeedback(this.moveHistory[this.moveHistory.length - 1]);
+                }
                 
                 // Check if AI should make a move
                 if (window.chessApp && window.chessApp.playingAgainstAI && this.currentPlayer === window.chessApp.chessAI.color && !this.gameOver) {

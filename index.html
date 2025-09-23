@@ -171,6 +171,9 @@
                 </div>
                 <div class="ai-status">
                     <div id="ai-status-indicator" class="status-indicator"></div>
+                    <div id="stockfish-status" class="status-indicator" style="margin-top: 8px;">
+                        <span style="font-size: 0.875em; color: #6b7280;">Stockfish Engine: <span id="stockfish-status-text">Loading...</span></span>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -247,8 +250,11 @@
     
     <script src="firebase-config.js"></script>
     <script src="config.js"></script>
+    <script src="utils.js"></script>
     <script src="auth.js"></script>
     <script src="user-data.js"></script>
+    <script src="chess-utils.js"></script>
+    <script src="stockfish-engine.js"></script>
     <script src="chess-engine.js"></script>
     <script src="chess-ai.js"></script>
     <script src="ai-tutor.js"></script>

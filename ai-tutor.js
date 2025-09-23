@@ -45,17 +45,135 @@ class AITutor {
         }
     }
     
-    analyzeMoveAndProvideFeedback(move) {
-        if (!move) return;
+    async analyzeMoveAndProvideFeedback(move) {
+        try {
+            if (!move) {
+                throw new Error('No move provided for analysis');
+            }
+            
+            // Validate move object
+            window.validator.validateMove(move);
+            
+            // Try Stockfish analysis first, fallback to basic analysis
+            let analysis;
+            try {
+                analysis = await this.analyzeWithStockfish(move);
+            } catch (error) {
+                console.log('Stockfish analysis failed, using basic analysis:', error);
+                analysis = this.analyzeMove(move);
+            }
+            
+            this.currentGameAnalysis.push(analysis);
+            
+            const feedback = this.generateFeedback(analysis, move);
+            this.displayFeedback(feedback);
+            
+            // Update player patterns
+            this.updatePlayerPatterns(move, analysis);
+            
+        } catch (error) {
+            window.errorHandler.handleError(error, 'Move Analysis', { notify: false });
+        }
+    }
+    
+    async analyzeWithStockfish(move) {
+        if (!window.stockfishEngine || !window.stockfishEngine.isReady || !window.ChessUtils) {
+            throw new Error('Stockfish engine not available');
+        }
         
-        const analysis = this.analyzeMove(move);
-        this.currentGameAnalysis.push(analysis);
+        try {
+            // Get the chess engine instance to access board state
+            const chessEngine = window.chessApp?.chessEngine;
+            if (!chessEngine) {
+                throw new Error('Chess engine not available');
+            }
+            
+            // Create board state before the move
+            const boardBeforeMove = this.reconstructBoardBeforeMove(chessEngine.board, move);
+            const playerBeforeMove = move.player === 'white' ? 'black' : 'white'; // Switch for before state
+            
+            // Convert to FEN
+            const fenBefore = window.ChessUtils.boardToFen(boardBeforeMove, playerBeforeMove, move.moveNumber);
+            const fenAfter = window.ChessUtils.boardToFen(chessEngine.board, chessEngine.currentPlayer, chessEngine.moveCount);
+            
+            // Get Stockfish evaluation
+            const moveQuality = await window.stockfishEngine.getMoveQuality(fenBefore, fenAfter, {
+                depth: 8,
+                time: 1500
+            });
+            
+            // Combine Stockfish analysis with basic analysis
+            const basicAnalysis = this.analyzeMove(move);
+            
+            return {
+                moveQuality: moveQuality.score,
+                stockfishEvaluation: moveQuality,
+                evalChange: moveQuality.evalChange,
+                tacticalThemes: basicAnalysis.tacticalThemes,
+                positionalFactors: basicAnalysis.positionalFactors,
+                openingPrinciples: basicAnalysis.openingPrinciples,
+                mistakes: this.identifyMistakesWithStockfish(move, moveQuality),
+                suggestions: this.generateStockfishSuggestions(move, moveQuality),
+                isStockfishAnalysis: true
+            };
+        } catch (error) {
+            console.error('Stockfish analysis error:', error);
+            throw error;
+        }
+    }
+    
+    reconstructBoardBeforeMove(currentBoard, move) {
+        // Create a copy of the current board and reverse the move
+        const board = window.ChessUtils.copyBoard(currentBoard);
         
-        const feedback = this.generateFeedback(analysis, move);
-        this.displayFeedback(feedback);
+        // Reverse the move
+        board[move.from[0]][move.from[1]] = move.piece;
+        board[move.to[0]][move.to[1]] = move.captured || null;
         
-        // Update player patterns
-        this.updatePlayerPatterns(move, analysis);
+        return board;
+    }
+    
+    identifyMistakesWithStockfish(move, stockfishQuality) {
+        const mistakes = [];
+        
+        // Use Stockfish evaluation to identify mistakes
+        if (stockfishQuality.evalChange < -0.5) {
+            mistakes.push('significant_evaluation_loss');
+        } else if (stockfishQuality.evalChange < -0.2) {
+            mistakes.push('evaluation_loss');
+        }
+        
+        // Add basic pattern mistakes
+        if (move.moveNumber <= 10 && move.piece.type === 'queen') {
+            mistakes.push('early_queen_development');
+        }
+        
+        return mistakes;
+    }
+    
+    generateStockfishSuggestions(move, stockfishQuality) {
+        const suggestions = [];
+        
+        if (stockfishQuality.score >= 80) {
+            suggestions.push('Excellent move! You found the best continuation.');
+        } else if (stockfishQuality.score >= 60) {
+            suggestions.push('Good move. You\'re maintaining a solid position.');
+        } else if (stockfishQuality.score < 30) {
+            if (stockfishQuality.evalChange < -0.5) {
+                suggestions.push('This move loses significant advantage. Look for better alternatives.');
+            } else {
+                suggestions.push('Consider calculating a few moves deeper before deciding.');
+            }
+        }
+        
+        // Add evaluation-based suggestions
+        if (Math.abs(stockfishQuality.evalChange) > 0.3) {
+            const beforeEval = window.ChessUtils.formatEvaluation(stockfishQuality.beforeEval);
+            const afterEval = window.ChessUtils.formatEvaluation(stockfishQuality.afterEval);
+            suggestions.push(`Position evaluation changed from ${beforeEval.score} to ${afterEval.score}.`);
+        }
+        
+        return suggestions;
     }
     
     analyzeMove(move) {
@@ -241,11 +359,13 @@ class AITutor {
     
     generateFeedback(analysis, move) {
         let feedback = {
-            type: 'general',
+            type: analysis.isStockfishAnalysis ? 'stockfish' : 'general',
             rating: this.getRatingFromScore(analysis.moveQuality),
             mainMessage: this.getMainFeedbackMessage(analysis, move),
             suggestions: analysis.suggestions,
-            principles: this.getRelevantPrinciples(analysis, move)
+            principles: this.getRelevantPrinciples(analysis, move),
+            stockfishData: analysis.stockfishEvaluation,
+            evalChange: analysis.evalChange
         };
         
         return feedback;
@@ -327,42 +447,141 @@ class AITutor {
     }
     
     displayFeedback(feedback) {
-        const feedbackElement = document.getElementById('tutor-feedback');
+        const feedbackElement = window.performanceOptimizer.getElement('tutor-feedback');
+        if (!feedbackElement) return;
         
-        const ratingColors = {
-            excellent: '#48bb78',
-            good: '#68d391',
-            okay: '#fbd38d',
-            questionable: '#f6ad55',
-            poor: '#fc8181'
-        };
-        
-        const feedbackHtml = `
-            <div class="feedback-item">
-                <div class="move-rating" style="color: ${ratingColors[feedback.rating]}; font-weight: bold;">
-                    Rating: ${feedback.rating.toUpperCase()}
-                </div>
-                <p class="main-feedback">${feedback.mainMessage}</p>
-                ${feedback.suggestions.length > 0 ? `
-                    <div class="suggestions">
-                        <strong>Suggestions:</strong>
-                        <ul>
-                            ${feedback.suggestions.map(s => `<li>${s}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-                ${feedback.principles.length > 0 ? `
-                    <div class="principles">
-                        <strong>Remember:</strong>
-                        <ul>
-                            ${feedback.principles.map(p => `<li>${p}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-            </div>
-        `;
-        
-        feedbackElement.innerHTML = feedbackHtml;
+        try {
+            // Clear existing content
+            feedbackElement.innerHTML = '';
+            
+            const ratingColors = {
+                excellent: '#48bb78',
+                good: '#68d391',
+                okay: '#fbd38d',
+                questionable: '#f6ad55',
+                poor: '#fc8181'
+            };
+            
+            // Create feedback item container
+            const feedbackItem = window.domHelper.createElement('div', {
+                className: 'feedback-item'
+            });
+            
+            // Create rating section
+            const ratingSection = window.domHelper.createElement('div', {
+                className: 'move-rating',
+                style: `color: ${ratingColors[feedback.rating]}; font-weight: bold; display: flex; align-items: center; gap: 8px;`
+            });
+            
+            const ratingText = window.domHelper.createElement('span', {
+                textContent: `Rating: ${feedback.rating.toUpperCase()}`
+            });
+            ratingSection.appendChild(ratingText);
+            
+            if (feedback.type === 'stockfish') {
+                const stockfishBadge = window.domHelper.createElement('span', {
+                    textContent: 'STOCKFISH',
+                    style: 'font-size: 0.75em; background: #4a5568; color: white; padding: 2px 6px; border-radius: 4px;'
+                });
+                ratingSection.appendChild(stockfishBadge);
+            }
+            
+            feedbackItem.appendChild(ratingSection);
+            
+            // Create Stockfish analysis section if available
+            if (feedback.stockfishData) {
+                const analysisSection = window.domHelper.createElement('div', {
+                    className: 'stockfish-analysis',
+                    style: 'margin: 8px 0; padding: 8px; background: #f7fafc; border-radius: 6px; font-size: 0.875em;'
+                });
+                
+                const qualityRow = window.domHelper.createElement('div', {
+                    style: 'display: flex; justify-content: space-between; margin-bottom: 4px;'
+                });
+                
+                const qualityText = window.domHelper.createElement('span');
+                qualityText.innerHTML = `<strong>Move Quality:</strong> ${feedback.stockfishData.score}/100`;
+                
+                const evalChangeText = window.domHelper.createElement('span');
+                const evalChange = feedback.evalChange ? 
+                    (feedback.evalChange > 0 ? '+' : '') + feedback.evalChange.toFixed(2) : 'N/A';
+                evalChangeText.innerHTML = `<strong>Eval Change:</strong> ${evalChange}`;
+                
+                qualityRow.appendChild(qualityText);
+                qualityRow.appendChild(evalChangeText);
+                analysisSection.appendChild(qualityRow);
+                
+                const evalRow = window.domHelper.createElement('div', {
+                    style: 'font-size: 0.8em; color: #718096;'
+                });
+                
+                const beforeEval = window.ChessUtils?.formatEvaluation(feedback.stockfishData.beforeEval)?.score || 'N/A';
+                const afterEval = window.ChessUtils?.formatEvaluation(feedback.stockfishData.afterEval)?.score || 'N/A';
+                evalRow.innerHTML = `<strong>Before:</strong> ${beforeEval} → <strong>After:</strong> ${afterEval}`;
+                
+                analysisSection.appendChild(evalRow);
+                feedbackItem.appendChild(analysisSection);
+            }
+            
+            // Create main feedback message
+            const mainFeedback = window.domHelper.createElement('p', {
+                className: 'main-feedback',
+                textContent: feedback.mainMessage
+            });
+            feedbackItem.appendChild(mainFeedback);
+            
+            // Create suggestions section
+            if (feedback.suggestions && feedback.suggestions.length > 0) {
+                const suggestionsSection = window.domHelper.createElement('div', {
+                    className: 'suggestions'
+                });
+                
+                const suggestionsTitle = window.domHelper.createElement('strong', {
+                    textContent: 'Suggestions:'
+                });
+                suggestionsSection.appendChild(suggestionsTitle);
+                
+                const suggestionsList = window.domHelper.createElement('ul');
+                feedback.suggestions.forEach(suggestion => {
+                    const listItem = window.domHelper.createElement('li', {
+                        textContent: suggestion
+                    });
+                    suggestionsList.appendChild(listItem);
+                });
+                
+                suggestionsSection.appendChild(suggestionsList);
+                feedbackItem.appendChild(suggestionsSection);
+            }
+            
+            // Create principles section
+            if (feedback.principles && feedback.principles.length > 0) {
+                const principlesSection = window.domHelper.createElement('div', {
+                    className: 'principles'
+                });
+                
+                const principlesTitle = window.domHelper.createElement('strong', {
+                    textContent: 'Remember:'
+                });
+                principlesSection.appendChild(principlesTitle);
+                
+                const principlesList = window.domHelper.createElement('ul');
+                feedback.principles.forEach(principle => {
+                    const listItem = window.domHelper.createElement('li', {
+                        textContent: principle
+                    });
+                    principlesList.appendChild(listItem);
+                });
+                
+                principlesSection.appendChild(principlesList);
+                feedbackItem.appendChild(principlesSection);
+            }
+            
+            feedbackElement.appendChild(feedbackItem);
+            
+        } catch (error) {
+            window.errorHandler.handleError(error, 'AI Tutor Display');
+            feedbackElement.textContent = 'Error displaying feedback. Please try again.';
+        }
     }
     
     updatePlayerPatterns(move, analysis) {
@@ -478,44 +697,54 @@ class AITutor {
     }
     
     async loadGameHistory() {
-        if (window.userDataService) {
-            return await window.userDataService.loadGameHistory();
-        }
-        
         try {
-            return JSON.parse(localStorage.getItem('chessAITutorHistory')) || [];
-        } catch {
+            if (window.userDataService) {
+                return await window.userDataService.loadGameHistory();
+            }
+            
+            return window.storageHelper.get('chessAITutorHistory', []);
+        } catch (error) {
+            window.errorHandler.handleError(error, 'Game History Load', { notify: false });
             return [];
         }
     }
     
     async saveGameHistory(history) {
-        if (window.userDataService) {
-            await window.userDataService.saveGameHistory(history);
-        } else {
-            localStorage.setItem('chessAITutorHistory', JSON.stringify(history));
+        try {
+            if (window.userDataService) {
+                await window.userDataService.saveGameHistory(history);
+            } else {
+                window.storageHelper.set('chessAITutorHistory', history);
+            }
+        } catch (error) {
+            window.errorHandler.handleError(error, 'Game History Save');
         }
     }
     
     async loadPlayerPatterns() {
-        if (window.userDataService) {
-            return await window.userDataService.loadPlayerPatterns();
-        }
-        
         try {
-            return JSON.parse(localStorage.getItem('chessAITutorPatterns')) || {};
-        } catch {
+            if (window.userDataService) {
+                return await window.userDataService.loadPlayerPatterns();
+            }
+            
+            return window.storageHelper.get('chessAITutorPatterns', {});
+        } catch (error) {
+            window.errorHandler.handleError(error, 'Player Patterns Load', { notify: false });
             return {};
         }
     }
     
     async savePlayerPatterns(patterns) {
-        if (window.userDataService) {
-            await window.userDataService.savePlayerPatterns(patterns);
-        } else {
-            localStorage.setItem('chessAITutorPatterns', JSON.stringify(patterns));
+        try {
+            if (window.userDataService) {
+                await window.userDataService.savePlayerPatterns(patterns);
+            } else {
+                window.storageHelper.set('chessAITutorPatterns', patterns);
+            }
+            this.playerPatterns = patterns;
+        } catch (error) {
+            window.errorHandler.handleError(error, 'Player Patterns Save');
         }
-        this.playerPatterns = patterns;
     }
     
     analyzeGame(gameHistory) {
