@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Logic Test</title>
+    <style>
+        body { 
+            font-family: 'Courier New', monospace; 
+            margin: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+        }
+        #output { 
+            background: #000; 
+            color: #0f0; 
+            padding: 20px; 
+            border-radius: 6px; 
+            height: 400px; 
+            overflow-y: auto; 
+            font-size: 14px; 
+            white-space: pre-wrap;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 10px 0; 
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chess Engine Logic Test</h1>
+        <p>This page tests the core chess logic to identify gameplay issues.</p>
+        
+        <button onclick="runTests()">Run Tests</button>
+        <button onclick="clearOutput()">Clear Output</button>
+        
+        <div id="output">Waiting for tests to run...</div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="utils.js"></script>
+    <script src="chess-utils.js"></script>
+    <script src="chess-engine.js"></script>
+    
+    <script>
+        const outputEl = document.getElementById('output');
+        
+        // Override console.log to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function captureConsole() {
+            console.log = function(...args) {
+                outputEl.textContent += args.join(' ') + '\n';
+                outputEl.scrollTop = outputEl.scrollHeight;
+                originalLog(...args);
+            };
+            
+            console.error = function(...args) {
+                outputEl.textContent += 'ERROR: ' + args.join(' ') + '\n';
+                outputEl.scrollTop = outputEl.scrollHeight;
+                originalError(...args);
+            };
+        }
+        
+        function runTests() {
+            outputEl.textContent = '';
+            captureConsole();
+            
+            console.log("=== CHESS ENGINE LOGIC TEST ===");
+            console.log("Loading dependencies...");
+            
+            // Wait a moment for scripts to load
+            setTimeout(() => {
+                try {
+                    if (typeof ChessEngine === 'undefined') {
+                        console.error("ChessEngine class not found!");
+                        return;
+                    }
+                    
+                    console.log("ChessEngine found. Running tests...\n");
+                    
+                    // Test 1: Board Initialization
+                    console.log("1. Testing Board Initialization...");
+                    const engine = new ChessEngine();
+                    const board = engine.board;
+                    
+                    console.log(`Board dimensions: ${board.length}x${board[0].length}`);
+                    
+                    // Verify white pieces (row 7 = rank 1)
+                    console.log("White back rank (row 7):", board[7].map(p => p ? p.type : 'empty').join(', '));
+                    console.log("White pawns (row 6):", board[6].map(p => p ? p.type : 'empty').join(', '));
+                    
+                    // Verify black pieces (row 0 = rank 8)
+                    console.log("Black back rank (row 0):", board[0].map(p => p ? p.type : 'empty').join(', '));
+                    console.log("Black pawns (row 1):", board[1].map(p => p ? p.type : 'empty').join(', '));
+                    
+                    // Count total pieces
+                    let pieceCount = 0;
+                    for (let row = 0; row < 8; row++) {
+                        for (let col = 0; col < 8; col++) {
+                            if (board[row][col]) pieceCount++;
+                        }
+                    }
+                    console.log(`Total pieces on board: ${pieceCount} (expected: 32)`);
+                    
+                    // Test 2: Coordinate System
+                    console.log("\n2. Testing Coordinate System...");
+                    console.log("a1 notation:", engine.getSquareNotation(7, 0), "(should be a1)");
+                    console.log("h8 notation:", engine.getSquareNotation(0, 7), "(should be h8)");
+                    console.log("e4 notation:", engine.getSquareNotation(4, 4), "(should be e4)");
+                    
+                    // Test piece locations
+                    console.log("Piece at a1 (7,0):", board[7][0] ? `${board[7][0].color} ${board[7][0].type}` : 'empty');
+                    console.log("Piece at e1 (7,4):", board[7][4] ? `${board[7][4].color} ${board[7][4].type}` : 'empty');
+                    console.log("Piece at e8 (0,4):", board[0][4] ? `${board[0][4].color} ${board[0][4].type}` : 'empty');
+                    
+                    // Test 3: Pawn Movement
+                    console.log("\n3. Testing Pawn Movement...");
+                    const whitePawnMoves = engine.getPawnMoves(6, 4, 'white');
+                    console.log("White pawn at e2 moves:", whitePawnMoves.map(([r,c]) => engine.getSquareNotation(r,c)).join(', '));
+                    
+                    const blackPawnMoves = engine.getPawnMoves(1, 4, 'black');
+                    console.log("Black pawn at e7 moves:", blackPawnMoves.map(([r,c]) => engine.getSquareNotation(r,c)).join(', '));
+                    
+                    // Test 4: Move Validation
+                    console.log("\n4. Testing Move Validation...");
+                    console.log("e2-e4 valid:", engine.isValidMove(6, 4, 4, 4));
+                    console.log("e2-d5 valid:", engine.isValidMove(6, 4, 3, 3));
+                    console.log("e2-e7 valid:", engine.isValidMove(6, 4, 1, 4));
+                    
+                    // Test 5: Move Execution
+                    console.log("\n5. Testing Move Execution...");
+                    console.log("Before move - Current player:", engine.currentPlayer);
+                    console.log("Before move - e2:", board[6][4] ? `${board[6][4].color} ${board[6][4].type}` : 'empty');
+                    console.log("Before move - e4:", board[4][4] ? `${board[4][4].color} ${board[4][4].type}` : 'empty');
+                    
+                    engine.makeMove(6, 4, 4, 4);
+                    
+                    console.log("After move - Current player:", engine.currentPlayer);
+                    console.log("After move - e2:", board[6][4] ? `${board[6][4].color} ${board[6][4].type}` : 'empty');
+                    console.log("After move - e4:", board[4][4] ? `${board[4][4].color} ${board[4][4].type}` : 'empty');
+                    console.log("Move history length:", engine.moveHistory.length);
+                    
+                    if (engine.moveHistory.length > 0) {
+                        const lastMove = engine.moveHistory[engine.moveHistory.length - 1];
+                        console.log("Last move notation:", engine.getMoveNotation(lastMove));
+                    }
+                    
+                    // Test 6: Check Detection Issue
+                    console.log("\n6. Testing Check Detection (Critical Issue)...");
+                    console.log("wouldBeInCheck(6,4,4,4):", engine.wouldBeInCheck(6, 4, 4, 4));
+                    console.log("This should return false, but the function is not implemented!");
+                    console.log("This is why moves that put king in check are allowed.");
+                    
+                    console.log("\n=== CORE ISSUES IDENTIFIED ===");
+                    console.log("1. wouldBeInCheck() always returns false - NO CHECK VALIDATION");
+                    console.log("2. Players can make illegal moves that put their king in check");
+                    console.log("3. Game allows moves when king is already in check");
+                    console.log("4. This breaks fundamental chess rules and causes 'funky' gameplay");
+                    
+                } catch (error) {
+                    console.error("Test failed:", error);
+                    console.error("Stack:", error.stack);
+                }
+            }, 100);
+        }
+        
+        function clearOutput() {
+            outputEl.textContent = 'Output cleared. Click "Run Tests" to start.';
+        }
+        
+        // Auto-run tests when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("Page loaded. Ready to run tests.");
+        });
+    </script>
+</body>
+</html>

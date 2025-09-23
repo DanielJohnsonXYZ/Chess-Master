@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Detection Test</title>
+    <style>
+        body { 
+            font-family: 'Courier New', monospace; 
+            margin: 20px; 
+            background: #f5f5f5; 
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 8px; 
+        }
+        #output { 
+            background: #000; 
+            color: #0f0; 
+            padding: 20px; 
+            border-radius: 6px; 
+            height: 400px; 
+            overflow-y: auto; 
+            font-size: 14px; 
+            white-space: pre-wrap;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 10px 20px; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 10px 0; 
+        }
+        button:hover { background: #0056b3; }
+        .pass { color: #22c55e; }
+        .fail { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Check Detection System Test</h1>
+        <p>Testing the new check detection implementation to verify gameplay fixes.</p>
+        
+        <button onclick="runCheckTests()">Test Check Detection</button>
+        <button onclick="clearOutput()">Clear Output</button>
+        
+        <div id="output">Ready to test check detection...</div>
+    </div>
+
+    <!-- Load dependencies -->
+    <script src="utils.js"></script>
+    <script src="chess-utils.js"></script>
+    <script src="chess-engine.js"></script>
+    
+    <script>
+        const outputEl = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const color = type === 'pass' ? '#22c55e' : type === 'fail' ? '#ef4444' : '#ffffff';
+            outputEl.innerHTML += `<span style="color: ${color}">${message}</span>\n`;
+            outputEl.scrollTop = outputEl.scrollHeight;
+        }
+        
+        function runCheckTests() {
+            outputEl.innerHTML = '';
+            log("=== CHECK DETECTION SYSTEM TEST ===");
+            
+            try {
+                if (typeof ChessEngine === 'undefined') {
+                    log("ChessEngine class not found!", 'fail');
+                    return;
+                }
+                
+                const engine = new ChessEngine();
+                log("Chess engine initialized successfully", 'pass');
+                
+                // Test 1: Basic check detection
+                log("\n1. Testing Basic Move Validation...");
+                
+                // Normal pawn move should be allowed
+                const normalMove = engine.isValidMove(6, 4, 4, 4); // e2-e4
+                log(`Normal pawn move e2-e4: ${normalMove}`, normalMove ? 'pass' : 'fail');
+                
+                // Test 2: Create a check scenario
+                log("\n2. Testing Check Detection...");
+                
+                // Clear some squares to create a check scenario
+                engine.board[1][4] = null; // Remove black pawn from e7
+                engine.board[2][4] = null; // Clear e6
+                engine.board[3][4] = null; // Clear e5
+                engine.board[4][4] = null; // Clear e4
+                engine.board[5][4] = null; // Clear e3
+                engine.board[6][4] = null; // Clear e2
+                
+                // Place white queen on e2 to threaten black king on e8
+                engine.board[6][4] = { type: 'queen', color: 'white' };
+                
+                log("Set up test position: White queen on e2, clear path to black king on e8");
+                
+                // Test if black king can detect being in check
+                const blackKingPos = engine.findKing('black');
+                if (blackKingPos) {
+                    const inCheck = engine.isSquareAttacked(blackKingPos[0], blackKingPos[1], 'white');
+                    log(`Black king in check: ${inCheck}`, inCheck ? 'pass' : 'fail');
+                } else {
+                    log("Could not find black king!", 'fail');
+                }
+                
+                // Test 3: Verify move blocking when in check
+                log("\n3. Testing Move Validation Under Check...");
+                
+                // Switch to black's turn
+                engine.currentPlayer = 'black';
+                
+                // Try to make a random move that doesn't block check
+                const invalidMove = engine.isValidMove(1, 0, 2, 0); // a7-a6 (doesn't help with check)
+                log(`Invalid move while in check (a7-a6): ${invalidMove}`, !invalidMove ? 'pass' : 'fail');
+                
+                // Test 4: Test piece attack patterns
+                log("\n4. Testing Piece Attack Patterns...");
+                
+                // Test queen attack pattern
+                const queenMoves = engine.getPieceAttackMoves(6, 4, { type: 'queen', color: 'white' });
+                const canAttackKing = queenMoves.some(([r, c]) => r === 0 && c === 4);
+                log(`Queen can attack king position: ${canAttackKing}`, canAttackKing ? 'pass' : 'fail');
+                
+                // Test pawn attack pattern
+                engine.board[5][3] = { type: 'pawn', color: 'white' }; // Place pawn on d3
+                const pawnAttacks = engine.getPawnAttackMoves(5, 3, 'white');
+                log(`Pawn attack squares: ${pawnAttacks.map(([r,c]) => engine.getSquareNotation(r,c)).join(', ')}`);
+                
+                // Test 5: Verify wouldBeInCheck function
+                log("\n5. Testing wouldBeInCheck Function...");
+                
+                // Reset to normal position
+                const freshEngine = new ChessEngine();
+                
+                // Test a normal move that doesn't create check
+                const normalNoCheck = freshEngine.wouldBeInCheck(6, 4, 4, 4); // e2-e4
+                log(`Normal move creates check: ${normalNoCheck}`, !normalNoCheck ? 'pass' : 'fail');
+                
+                // Create a scenario where a move would expose the king
+                freshEngine.board[6][3] = null; // Remove d2 pawn
+                freshEngine.board[5][3] = { type: 'bishop', color: 'black' }; // Place black bishop on d3
+                
+                // Moving the e2 pawn would expose the king to the bishop
+                const exposesKing = freshEngine.wouldBeInCheck(6, 4, 4, 4); // e2-e4
+                log(`Move that exposes king creates check: ${exposesKing}`, exposesKing ? 'pass' : 'fail');
+                
+                log("\n=== CHECK DETECTION TEST COMPLETE ===", 'pass');
+                log("If all tests pass, the check detection system is working correctly!");
+                
+            } catch (error) {
+                log(`Test failed with error: ${error.message}`, 'fail');
+                log(`Stack trace: ${error.stack}`, 'fail');
+            }
+        }
+        
+        function clearOutput() {
+            outputEl.innerHTML = 'Output cleared. Click "Test Check Detection" to start.';
+        }
+    </script>
+</body>
+</html>

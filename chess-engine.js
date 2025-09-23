@@ -447,9 +447,17 @@ class ChessEngine {
     }
     
     updateGameInfo() {
-        document.getElementById('current-player').textContent = 
-            `${this.currentPlayer.charAt(0).toUpperCase() + this.currentPlayer.slice(1)} to move`;
-        document.getElementById('move-counter').textContent = `Move: ${this.moveCount}`;
+        const currentPlayerEl = document.getElementById('current-player');
+        const moveCounterEl = document.getElementById('move-counter');
+        
+        if (currentPlayerEl) {
+            currentPlayerEl.textContent = 
+                `${this.currentPlayer.charAt(0).toUpperCase() + this.currentPlayer.slice(1)} to move`;
+        }
+        
+        if (moveCounterEl) {
+            moveCounterEl.textContent = `Move: ${this.moveCount}`;
+        }
     }
     
     updateCapturedPieces() {
@@ -520,8 +528,112 @@ class ChessEngine {
     }
     
     wouldBeInCheck(fromRow, fromCol, toRow, toCol) {
-        // Simple check detection - would need full implementation for real game
+        // Create a temporary board state after the proposed move
+        const originalPiece = this.board[toRow][toCol];
+        const movingPiece = this.board[fromRow][fromCol];
+        
+        // Temporarily make the move
+        this.board[toRow][toCol] = movingPiece;
+        this.board[fromRow][fromCol] = null;
+        
+        // Find the king of the current player
+        const kingPosition = this.findKing(movingPiece.color);
+        let inCheck = false;
+        
+        if (kingPosition) {
+            // Check if any opponent piece can attack the king
+            inCheck = this.isSquareAttacked(kingPosition[0], kingPosition[1], movingPiece.color === 'white' ? 'black' : 'white');
+        }
+        
+        // Restore the original board state
+        this.board[fromRow][fromCol] = movingPiece;
+        this.board[toRow][toCol] = originalPiece;
+        
+        return inCheck;
+    }
+    
+    findKing(color) {
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const piece = this.board[row][col];
+                if (piece && piece.type === 'king' && piece.color === color) {
+                    return [row, col];
+                }
+            }
+        }
+        return null;
+    }
+    
+    isSquareAttacked(targetRow, targetCol, attackingColor) {
+        // Check if any piece of the attacking color can reach the target square
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const piece = this.board[row][col];
+                if (piece && piece.color === attackingColor) {
+                    const moves = this.getPieceAttackMoves(row, col, piece);
+                    if (moves.some(([r, c]) => r === targetRow && c === targetCol)) {
+                        return true;
+                    }
+                }
+            }
+        }
         return false;
+    }
+    
+    getPieceAttackMoves(row, col, piece) {
+        // Get raw attack moves without check validation to avoid infinite recursion
+        switch (piece.type) {
+            case 'pawn':
+                return this.getPawnAttackMoves(row, col, piece.color);
+            case 'rook':
+                return this.getRookMoves(row, col, piece.color);
+            case 'knight':
+                return this.getKnightMoves(row, col, piece.color);
+            case 'bishop':
+                return this.getBishopMoves(row, col, piece.color);
+            case 'queen':
+                return this.getQueenMoves(row, col, piece.color);
+            case 'king':
+                return this.getKingAttackMoves(row, col, piece.color);
+            default:
+                return [];
+        }
+    }
+    
+    getPawnAttackMoves(row, col, color) {
+        const moves = [];
+        const direction = color === 'white' ? -1 : 1;
+        
+        // Pawns only attack diagonally
+        for (const dc of [-1, 1]) {
+            const newRow = row + direction;
+            const newCol = col + dc;
+            if (this.isInBounds(newRow, newCol)) {
+                moves.push([newRow, newCol]);
+            }
+        }
+        
+        return moves;
+    }
+    
+    getKingAttackMoves(row, col, color) {
+        const moves = [];
+        const directions = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
+            [1, -1],  [1, 0],  [1, 1]
+        ];
+        
+        for (const [dr, dc] of directions) {
+            const newRow = row + dr;
+            const newCol = col + dc;
+            
+            if (this.isInBounds(newRow, newCol)) {
+                moves.push([newRow, newCol]);
+            }
+        }
+        
+        return moves;
     }
     
     newGame() {
