@@ -279,18 +279,20 @@
             const statusDiv = document.getElementById('stockfish-status');
             
             if (!window.stockfishEngine) {
-                statusDiv.innerHTML = '<div>❌ Stockfish engine not initialized</div>';
+                statusDiv.innerHTML = '<div>❌ Chess engine not initialized</div>';
                 return;
             }
             
-            statusDiv.innerHTML = '<div>⏳ Stockfish engine initializing...</div>';
+            statusDiv.innerHTML = '<div>⏳ Chess engine initializing...</div>';
             
             window.stockfishEngine.onReady(() => {
-                statusDiv.innerHTML = '<div style="color: #28a745;">✅ Stockfish engine ready and operational</div>';
+                const engineType = window.stockfishEngine.isLocalEngine ? 'Local Chess Engine' : 'Stockfish Engine';
+                const engineColor = window.stockfishEngine.isLocalEngine ? '#17a2b8' : '#28a745';
+                statusDiv.innerHTML = `<div style="color: ${engineColor};">✅ ${engineType} ready and operational</div>`;
             });
             
             window.stockfishEngine.onError((error) => {
-                statusDiv.innerHTML = `<div style="color: #ffc107;">⚠️ Stockfish unavailable: ${error}</div><div>Using basic AI analysis instead</div>`;
+                statusDiv.innerHTML = `<div style="color: #ffc107;">⚠️ External Stockfish unavailable: ${error}</div><div>Falling back to local chess engine...</div>`;
             });
         }
         

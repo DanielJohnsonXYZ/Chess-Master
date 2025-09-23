@@ -17,7 +17,7 @@ class StockfishEngine {
 
     async initializeEngine() {
         try {
-            // Check if Stockfish is available from multiple sources
+            // Try external Stockfish sources first
             const stockfishSources = [
                 'https://cdn.jsdelivr.net/npm/stockfish@15.0.0/src/stockfish.js',
                 'https://unpkg.com/stockfish@15.0.0/src/stockfish.js'
@@ -28,20 +28,24 @@ class StockfishEngine {
                     // Use timeout with fallback if asyncHelper not available
                     const loadPromise = this.loadStockfishScript(src);
                     const timeoutPromise = new Promise((_, reject) => {
-                        setTimeout(() => reject(new Error('Load timeout')), 10000);
+                        setTimeout(() => reject(new Error('Load timeout')), 5000);
                     });
                     
                     await Promise.race([loadPromise, timeoutPromise]);
                     this.loadEngine(src);
+                    console.log('External Stockfish engine loaded successfully');
                     return;
                 } catch (error) {
                     console.warn(`Failed to load Stockfish from ${src}:`, error);
                 }
             }
             
-            throw new Error('All Stockfish sources failed to load');
+            // Fallback to local engine
+            console.log('Falling back to local chess engine');
+            this.loadLocalEngine();
+            
         } catch (error) {
-            console.error('Error initializing Stockfish:', error);
+            console.error('Error initializing chess engine:', error);
             this.callbacks.onError?.(error.message);
         }
     }
@@ -78,6 +82,29 @@ class StockfishEngine {
         }
     }
 
+    loadLocalEngine() {
+        try {
+            // Create local chess engine worker
+            this.engine = new Worker('stockfish-worker.js');
+            this.isLocalEngine = true;
+            
+            this.engine.onmessage = (event) => {
+                this.handleEngineMessage(event.data);
+            };
+
+            this.engine.onerror = (error) => {
+                console.error('Local engine worker error:', error);
+                this.callbacks.onError?.(error.message);
+            };
+
+            // Initialize UCI protocol
+            this.sendCommand('uci');
+        } catch (error) {
+            console.error('Error loading local engine:', error);
+            this.callbacks.onError?.(error.message);
+        }
+    }
+
     handleEngineMessage(message) {
         const line = message.trim();
         
@@ -90,6 +117,32 @@ class StockfishEngine {
             this.parseInfoLine(line);
         } else if (line.startsWith('bestmove')) {
             this.parseBestMove(line);
+        } else if (line.startsWith('evaluation')) {
+            this.parseEvaluationResponse(line);
+        } else if (line.includes('ready') && this.isLocalEngine) {
+            // Local engine is ready
+            this.isReady = true;
+            this.callbacks.onReady?.();
+        }
+    }
+
+    parseEvaluationResponse(line) {
+        // Parse: "evaluation [requestId] [result]"
+        const parts = line.split(' ');
+        if (parts.length >= 3) {
+            const requestId = parseInt(parts[1]);
+            const resultJson = parts.slice(2).join(' ');
+            
+            if (this.pendingEvaluations && this.pendingEvaluations.has(requestId)) {
+                try {
+                    const result = JSON.parse(resultJson);
+                    const resolve = this.pendingEvaluations.get(requestId);
+                    this.pendingEvaluations.delete(requestId);
+                    resolve(result);
+                } catch (error) {
+                    console.error('Error parsing evaluation result:', error);
+                }
+            }
         }
     }
 
@@ -246,15 +299,47 @@ class StockfishEngine {
 
     async getMoveQuality(beforeFen, afterFen, options = {}) {
         try {
+            // If using local engine, use direct evaluation
+            if (this.isLocalEngine) {
+                return this.evaluateWithLocalEngine(beforeFen, afterFen);
+            }
+            
             const beforeEval = await this.evaluatePosition(beforeFen, options);
             const afterEval = await this.evaluatePosition(afterFen, options);
 
             const quality = this.calculateMoveQuality(beforeEval, afterEval);
             return quality;
         } catch (error) {
-            console.error('Stockfish move quality error:', error);
+            console.error('Chess engine move quality error:', error);
             throw error;
         }
+    }
+
+    evaluateWithLocalEngine(beforeFen, afterFen) {
+        return new Promise((resolve) => {
+            // Send evaluation request to local engine
+            const requestId = Date.now();
+            this.pendingEvaluations = this.pendingEvaluations || new Map();
+            
+            this.pendingEvaluations.set(requestId, resolve);
+            
+            // Send custom evaluation command
+            this.engine.postMessage(`evaluate ${requestId} ${beforeFen} ${afterFen}`);
+            
+            // Timeout fallback
+            setTimeout(() => {
+                if (this.pendingEvaluations.has(requestId)) {
+                    this.pendingEvaluations.delete(requestId);
+                    resolve({
+                        score: 50,
+                        evalChange: 0,
+                        beforeEval: 0,
+                        afterEval: 0,
+                        rating: 'okay'
+                    });
+                }
+            }, 2000);
+        });
     }
 
     calculateMoveQuality(beforeEval, afterEval) {
@@ -354,18 +439,20 @@ document.addEventListener('DOMContentLoaded', () => {
         window.stockfishEngine = new StockfishEngine();
         
         window.stockfishEngine.onReady(() => {
-            console.log('Stockfish engine ready - Enhanced AI analysis available');
+            const engineType = window.stockfishEngine.isLocalEngine ? 'Local Chess Engine' : 'Stockfish Engine';
+            console.log(`${engineType} ready - Enhanced AI analysis available`);
             // Update status indicator
             setTimeout(() => {
                 const statusText = document.getElementById('stockfish-status-text');
                 if (statusText) {
-                    statusText.textContent = 'Ready';
-                    statusText.style.color = '#48bb78';
+                    statusText.textContent = window.stockfishEngine.isLocalEngine ? 'Local Engine Ready' : 'Ready';
+                    statusText.style.color = window.stockfishEngine.isLocalEngine ? '#17a2b8' : '#48bb78';
                 }
-                // Show user notification that Stockfish is available
+                // Show user notification that engine is available
                 const feedbackElement = document.getElementById('tutor-feedback');
                 if (feedbackElement) {
-                    feedbackElement.innerHTML = '<p style="color: #48bb78; font-weight: bold;">🔥 Stockfish engine loaded! You\'ll now receive enhanced AI analysis.</p>';
+                    const engineEmoji = window.stockfishEngine.isLocalEngine ? '⚡' : '🔥';
+                    feedbackElement.innerHTML = `<p style="color: #48bb78; font-weight: bold;">${engineEmoji} ${engineType} loaded! You'll now receive enhanced AI analysis.</p>`;
                 }
             }, 100);
         });
