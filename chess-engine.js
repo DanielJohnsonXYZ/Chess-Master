@@ -480,18 +480,35 @@ class ChessEngine {
     }
     
     getMoveNotation(move) {
-        const pieceSymbol = move.piece.type === 'pawn' ? '' : 
-            move.piece.type.charAt(0).toUpperCase();
-        const toSquare = this.getSquareNotation(move.to[0], move.to[1]);
-        const capture = move.captured ? 'x' : '';
-        
-        // For pawns, include file letter if capturing
-        if (move.piece.type === 'pawn' && move.captured) {
-            const fromFile = String.fromCharCode(97 + move.from[1]);
-            return `${fromFile}${capture}${toSquare}`;
+        // Defensive programming - check if move object is valid
+        if (!move || !move.piece || !move.to || !move.from) {
+            console.error('Invalid move object:', move);
+            return 'Invalid';
         }
         
-        return `${pieceSymbol}${capture}${toSquare}`;
+        if (!Array.isArray(move.to) || move.to.length !== 2 || 
+            !Array.isArray(move.from) || move.from.length !== 2) {
+            console.error('Invalid move coordinates:', move);
+            return 'Invalid';
+        }
+        
+        try {
+            const pieceSymbol = move.piece.type === 'pawn' ? '' : 
+                move.piece.type.charAt(0).toUpperCase();
+            const toSquare = this.getSquareNotation(move.to[0], move.to[1]);
+            const capture = move.captured ? 'x' : '';
+            
+            // For pawns, include file letter if capturing
+            if (move.piece.type === 'pawn' && move.captured) {
+                const fromFile = String.fromCharCode(97 + move.from[1]);
+                return `${fromFile}${capture}${toSquare}`;
+            }
+            
+            return `${pieceSymbol}${capture}${toSquare}`;
+        } catch (error) {
+            console.error('Error generating move notation:', error, move);
+            return 'Error';
+        }
     }
     
     getSquareNotation(row, col) {
@@ -508,21 +525,44 @@ class ChessEngine {
     }
     
     newGame() {
-        this.board = this.initializeBoard();
-        this.currentPlayer = 'white';
-        this.moveHistory = [];
-        this.capturedPieces = { white: [], black: [] };
-        this.selectedSquare = null;
-        this.possibleMoves = [];
-        this.gameOver = false;
-        this.moveCount = 1;
-        
-        this.renderBoard();
-        this.updateGameInfo();
-        this.updateCapturedPieces();
-        this.updateMoveHistory();
-        
-        document.getElementById('tutor-feedback').innerHTML = 
-            '<p>New game started! Make your first move to begin receiving guidance.</p>';
+        try {
+            // Reset all game state
+            this.board = this.initializeBoard();
+            this.currentPlayer = 'white';
+            this.moveHistory = [];
+            this.capturedPieces = { white: [], black: [] };
+            this.selectedSquare = null;
+            this.possibleMoves = [];
+            this.gameOver = false;
+            this.moveCount = 1;
+            
+            // Clear any existing highlights
+            this.clearHighlights();
+            
+            // Re-render everything
+            this.renderBoard();
+            this.updateGameInfo();
+            this.updateCapturedPieces();
+            this.updateMoveHistory();
+            
+            // Clear AI feedback
+            const feedbackElement = document.getElementById('tutor-feedback');
+            if (feedbackElement) {
+                feedbackElement.innerHTML = 
+                    '<p>New game started! Make your first move to begin receiving guidance.</p>';
+            }
+            
+            // Reset AI tutor state
+            if (window.aiTutor) {
+                window.aiTutor.startNewGame();
+            }
+            
+            console.log('New game initialized successfully');
+        } catch (error) {
+            console.error('Error starting new game:', error);
+            if (window.errorHandler) {
+                window.errorHandler.handleError(error, 'New Game');
+            }
+        }
     }
 }

@@ -35,6 +35,14 @@ class ChessApp {
             this.startNewGame();
         });
         
+        // Force reset button (for debugging)
+        const forceResetBtn = document.getElementById('force-reset');
+        if (forceResetBtn) {
+            forceResetBtn.addEventListener('click', () => {
+                this.forceReset();
+            });
+        }
+        
         // Analyze game button
         document.getElementById('analyze-game').addEventListener('click', () => {
             this.analyzeCurrentGame();
@@ -75,19 +83,118 @@ class ChessApp {
     }
     
     startNewGame() {
-        // Save current game to history if it has moves
-        if (this.chessEngine.moveHistory.length > 0) {
-            this.saveGameToHistory();
+        try {
+            console.log('Starting new game...');
+            
+            // Save current game to history if it has moves
+            if (this.chessEngine && this.chessEngine.moveHistory && this.chessEngine.moveHistory.length > 0) {
+                this.saveGameToHistory();
+            }
+            
+            // Reset game state
+            if (this.chessEngine) {
+                this.chessEngine.newGame();
+            } else {
+                console.error('Chess engine not initialized');
+                this.chessEngine = new ChessEngine();
+            }
+            
+            if (this.aiTutor) {
+                this.aiTutor.startNewGame();
+            }
+            
+            // Update pattern insights
+            this.updatePatternInsights();
+            
+            // Hide force reset button if visible
+            const forceResetBtn = document.getElementById('force-reset');
+            if (forceResetBtn) {
+                forceResetBtn.style.display = 'none';
+            }
+            
+            console.log('New game started successfully');
+        } catch (error) {
+            console.error('Error starting new game:', error);
+            if (window.errorHandler) {
+                window.errorHandler.handleError(error, 'App New Game');
+            }
+            
+            // Show force reset button if something is broken
+            const forceResetBtn = document.getElementById('force-reset');
+            if (forceResetBtn) {
+                forceResetBtn.style.display = 'inline-flex';
+            }
+            
+            // Try to force reinitialize if something is broken
+            try {
+                this.chessEngine = new ChessEngine();
+                this.chessEngine.renderBoard();
+            } catch (reinitError) {
+                console.error('Failed to reinitialize chess engine:', reinitError);
+            }
         }
-        
-        // Reset game state
-        this.chessEngine.newGame();
-        this.aiTutor.startNewGame();
-        
-        // Update pattern insights
-        this.updatePatternInsights();
-        
-        console.log('New game started');
+    }
+
+    forceReset() {
+        try {
+            console.log('Force resetting entire application...');
+            
+            // Clear all localStorage
+            localStorage.removeItem('chessAITutorHistory');
+            localStorage.removeItem('chessAITutorPatterns');
+            localStorage.removeItem('chess-theme');
+            
+            // Recreate all components from scratch
+            this.chessEngine = new ChessEngine();
+            this.aiTutor = new AITutor();
+            this.chessAI = new ChessAI(3);
+            this.playingAgainstAI = false;
+            
+            // Re-render everything
+            this.chessEngine.renderBoard();
+            this.chessEngine.updateGameInfo();
+            this.chessEngine.updateCapturedPieces();
+            this.chessEngine.updateMoveHistory();
+            
+            // Clear feedback
+            const feedbackElement = document.getElementById('tutor-feedback');
+            if (feedbackElement) {
+                feedbackElement.innerHTML = '<p>Application reset! Ready for a fresh start.</p>';
+            }
+            
+            // Clear pattern insights
+            const patternsElement = document.getElementById('pattern-insights');
+            if (patternsElement) {
+                patternsElement.innerHTML = '<p>Play more games to unlock pattern analysis!</p>';
+            }
+            
+            // Hide force reset button
+            const forceResetBtn = document.getElementById('force-reset');
+            if (forceResetBtn) {
+                forceResetBtn.style.display = 'none';
+            }
+            
+            // Update global references
+            window.aiTutor = this.aiTutor;
+            window.chessApp = this;
+            
+            console.log('Force reset completed successfully');
+            
+            if (window.errorHandler) {
+                window.errorHandler.notifyUser('Application reset successfully!', 'success');
+            }
+            
+        } catch (error) {
+            console.error('Force reset failed:', error);
+            if (window.errorHandler) {
+                window.errorHandler.handleError(error, 'Force Reset');
+            }
+            
+            // Last resort - reload the page
+            if (confirm('Reset failed. Reload the page?')) {
+                window.location.reload();
+            }
+        }
     }
     
     async analyzeCurrentGame() {

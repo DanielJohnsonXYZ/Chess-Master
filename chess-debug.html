@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Engine Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .debug-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .debug-board {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            gap: 1px;
+            margin: 20px 0;
+            border: 2px solid #333;
+            width: fit-content;
+        }
+        .debug-square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            cursor: pointer;
+            border: 1px solid #ddd;
+        }
+        .debug-square.light { background: #f0d9b5; }
+        .debug-square.dark { background: #b58863; }
+        .debug-square.selected { background: #ffeb3b !important; }
+        .debug-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .debug-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+        .debug-panel h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        pre {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .status.pass { background: #d4edda; color: #155724; }
+        .status.fail { background: #f8d7da; color: #721c24; }
+        .status.warn { background: #fff3cd; color: #856404; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>Chess Engine Debug Tool</h1>
+        
+        <div class="debug-actions">
+            <button onclick="initializeBoard()">Initialize Board</button>
+            <button onclick="testMove()">Test Move</button>
+            <button onclick="clearBoard()">Clear Board</button>
+            <button onclick="diagnostics()">Run Diagnostics</button>
+        </div>
+        
+        <div id="status-panel">
+            <div class="status warn">Initializing debug tool...</div>
+        </div>
+        
+        <div class="debug-board" id="debug-board">
+            <!-- Board will be rendered here -->
+        </div>
+        
+        <div class="debug-info">
+            <div class="debug-panel">
+                <h3>Board State</h3>
+                <pre id="board-state">Loading...</pre>
+            </div>
+            
+            <div class="debug-panel">
+                <h3>Move History</h3>
+                <pre id="move-history">No moves yet</pre>
+            </div>
+        </div>
+        
+        <div class="debug-info">
+            <div class="debug-panel">
+                <h3>Game Variables</h3>
+                <pre id="game-variables">Loading...</pre>
+            </div>
+            
+            <div class="debug-panel">
+                <h3>DOM Elements</h3>
+                <pre id="dom-status">Checking...</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load chess engine -->
+    <script src="utils.js"></script>
+    <script src="chess-utils.js"></script>
+    <script src="chess-engine.js"></script>
+    <script src="ai-tutor.js"></script>
+
+    <script>
+        let chessEngine = null;
+        let selectedSquare = null;
+
+        function addStatus(message, type = 'warn') {
+            const panel = document.getElementById('status-panel');
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+            panel.appendChild(statusDiv);
+        }
+
+        function updateBoardState() {
+            if (!chessEngine) return;
+            
+            const boardStateEl = document.getElementById('board-state');
+            const moveHistoryEl = document.getElementById('move-history');
+            const gameVarsEl = document.getElementById('game-variables');
+            
+            // Board state
+            boardStateEl.textContent = JSON.stringify(chessEngine.board, null, 2);
+            
+            // Move history
+            moveHistoryEl.textContent = JSON.stringify(chessEngine.moveHistory, null, 2);
+            
+            // Game variables
+            const gameVars = {
+                currentPlayer: chessEngine.currentPlayer,
+                moveCount: chessEngine.moveCount,
+                gameOver: chessEngine.gameOver,
+                selectedSquare: chessEngine.selectedSquare,
+                possibleMoves: chessEngine.possibleMoves
+            };
+            gameVarsEl.textContent = JSON.stringify(gameVars, null, 2);
+        }
+
+        function renderDebugBoard() {
+            const boardEl = document.getElementById('debug-board');
+            boardEl.innerHTML = '';
+            
+            if (!chessEngine) {
+                addStatus('Chess engine not initialized', 'fail');
+                return;
+            }
+            
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = document.createElement('div');
+                    square.className = `debug-square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    
+                    const piece = chessEngine.board[row][col];
+                    if (piece) {
+                        square.textContent = chessEngine.pieceSymbols[piece.color][piece.type];
+                        square.title = `${piece.color} ${piece.type} at ${String.fromCharCode(97 + col)}${8 - row}`;
+                    } else {
+                        square.title = `Empty square ${String.fromCharCode(97 + col)}${8 - row}`;
+                    }
+                    
+                    square.addEventListener('click', (e) => handleSquareClick(e));
+                    boardEl.appendChild(square);
+                }
+            }
+            
+            updateBoardState();
+            addStatus('Board rendered successfully', 'pass');
+        }
+
+        function handleSquareClick(event) {
+            const row = parseInt(event.target.dataset.row);
+            const col = parseInt(event.target.dataset.col);
+            
+            // Clear previous selection
+            document.querySelectorAll('.debug-square').forEach(s => s.classList.remove('selected'));
+            
+            if (selectedSquare) {
+                const [fromRow, fromCol] = selectedSquare;
+                if (row === fromRow && col === fromCol) {
+                    selectedSquare = null;
+                    addStatus('Square deselected', 'warn');
+                    return;
+                }
+                
+                // Try to make move
+                if (chessEngine.isValidMove(fromRow, fromCol, row, col)) {
+                    chessEngine.makeMove(fromRow, fromCol, row, col);
+                    addStatus(`Move: ${String.fromCharCode(97 + fromCol)}${8 - fromRow} to ${String.fromCharCode(97 + col)}${8 - row}`, 'pass');
+                    selectedSquare = null;
+                    renderDebugBoard();
+                } else {
+                    addStatus('Invalid move attempted', 'fail');
+                    selectedSquare = [row, col];
+                    event.target.classList.add('selected');
+                }
+            } else {
+                const piece = chessEngine.board[row][col];
+                if (piece && piece.color === chessEngine.currentPlayer) {
+                    selectedSquare = [row, col];
+                    event.target.classList.add('selected');
+                    addStatus(`Selected ${piece.color} ${piece.type}`, 'pass');
+                } else {
+                    addStatus('Invalid piece selection', 'fail');
+                }
+            }
+        }
+
+        function initializeBoard() {
+            try {
+                chessEngine = new ChessEngine();
+                addStatus('Chess engine initialized', 'pass');
+                renderDebugBoard();
+            } catch (error) {
+                addStatus(`Initialization failed: ${error.message}`, 'fail');
+                console.error('Init error:', error);
+            }
+        }
+
+        function testMove() {
+            if (!chessEngine) {
+                addStatus('Initialize board first', 'fail');
+                return;
+            }
+            
+            // Test a standard opening move (e2-e4)
+            try {
+                if (chessEngine.isValidMove(6, 4, 4, 4)) {
+                    chessEngine.makeMove(6, 4, 4, 4);
+                    addStatus('Test move e2-e4 successful', 'pass');
+                    renderDebugBoard();
+                } else {
+                    addStatus('Test move e2-e4 invalid', 'fail');
+                }
+            } catch (error) {
+                addStatus(`Test move failed: ${error.message}`, 'fail');
+            }
+        }
+
+        function clearBoard() {
+            chessEngine = null;
+            selectedSquare = null;
+            document.getElementById('debug-board').innerHTML = '';
+            document.getElementById('board-state').textContent = 'Board cleared';
+            document.getElementById('move-history').textContent = 'No moves';
+            document.getElementById('game-variables').textContent = 'No engine';
+            addStatus('Board cleared', 'warn');
+        }
+
+        function diagnostics() {
+            const domStatusEl = document.getElementById('dom-status');
+            const diagnostics = {
+                windowObjects: {
+                    ChessEngine: typeof ChessEngine !== 'undefined',
+                    AITutor: typeof AITutor !== 'undefined',
+                    ChessUtils: typeof window.ChessUtils !== 'undefined',
+                    errorHandler: typeof window.errorHandler !== 'undefined'
+                },
+                domElements: {
+                    debugBoard: !!document.getElementById('debug-board'),
+                    statusPanel: !!document.getElementById('status-panel')
+                },
+                engineState: chessEngine ? {
+                    hasBoard: !!chessEngine.board,
+                    boardLength: chessEngine.board ? chessEngine.board.length : 0,
+                    pieceSymbols: !!chessEngine.pieceSymbols,
+                    currentPlayer: chessEngine.currentPlayer,
+                    moveCount: chessEngine.moveCount
+                } : 'Not initialized'
+            };
+            
+            domStatusEl.textContent = JSON.stringify(diagnostics, null, 2);
+            addStatus('Diagnostics complete', 'pass');
+        }
+
+        // Auto-initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            addStatus('DOM loaded, running diagnostics...', 'pass');
+            diagnostics();
+            addStatus('Ready for testing!', 'pass');
+        });
+    </script>
+</body>
+</html>
