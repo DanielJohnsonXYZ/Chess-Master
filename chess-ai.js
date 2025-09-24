@@ -120,6 +120,9 @@ class ChessAI {
             return null;
         }
         
+        // Sort moves to prioritize captures and checks
+        moves.sort((a, b) => this.getMoveScore(chessEngine, b) - this.getMoveScore(chessEngine, a));
+        
         let bestMove = null;
         let bestScore = -Infinity;
         
@@ -133,6 +136,40 @@ class ChessAI {
         }
         
         return bestMove;
+    }
+    
+    // Get move priority score for sorting
+    getMoveScore(chessEngine, move) {
+        let score = 0;
+        
+        // Prioritize captures
+        const capturedPiece = chessEngine.board[move.toRow][move.toCol];
+        if (capturedPiece) {
+            score += this.pieceValues[capturedPiece.type];
+            
+            // Even higher priority for capturing high-value pieces
+            if (capturedPiece.type === 'queen') {
+                score += 500; // Extra bonus for queen captures
+            } else if (capturedPiece.type === 'rook') {
+                score += 200; // Extra bonus for rook captures
+            }
+        }
+        
+        // Prioritize center moves
+        const centerDistance = Math.abs(3.5 - move.toRow) + Math.abs(3.5 - move.toCol);
+        score += (7 - centerDistance) * 5;
+        
+        // Prioritize piece development (getting pieces off back rank)
+        if (move.piece.color === this.color) {
+            if ((this.color === 'white' && move.fromRow === 7) || 
+                (this.color === 'black' && move.fromRow === 0)) {
+                if (move.piece.type === 'knight' || move.piece.type === 'bishop') {
+                    score += 30; // Development bonus
+                }
+            }
+        }
+        
+        return score;
     }
     
     // Minimax algorithm with alpha-beta pruning
@@ -198,6 +235,46 @@ class ChessAI {
                 } else {
                     score -= pieceValue;
                 }
+            }
+        }
+        
+        // Add tactical bonuses
+        score += this.evaluateTactics(chessEngine);
+        
+        return score;
+    }
+    
+    // Evaluate tactical elements
+    evaluateTactics(chessEngine) {
+        let score = 0;
+        
+        // Check for captures available
+        const myMoves = this.getAllValidMoves(chessEngine, this.color);
+        const opponentColor = this.color === 'white' ? 'black' : 'white';
+        const opponentMoves = this.getAllValidMoves(chessEngine, opponentColor);
+        
+        // Bonus for capturing valuable pieces
+        for (const move of myMoves) {
+            const capturedPiece = chessEngine.board[move.toRow][move.toCol];
+            if (capturedPiece) {
+                score += this.pieceValues[capturedPiece.type] * 0.1; // 10% bonus for captures
+            }
+        }
+        
+        // Penalty for hanging pieces (pieces under attack)
+        for (const opponentMove of opponentMoves) {
+            const targetPiece = chessEngine.board[opponentMove.toRow][opponentMove.toCol];
+            if (targetPiece && targetPiece.color === this.color) {
+                score -= this.pieceValues[targetPiece.type] * 0.15; // Penalty for hanging pieces
+            }
+        }
+        
+        // Center control bonus
+        const centerSquares = [[3,3], [3,4], [4,3], [4,4]];
+        for (const [row, col] of centerSquares) {
+            const piece = chessEngine.board[row][col];
+            if (piece && piece.color === this.color) {
+                score += 20; // Bonus for controlling center
             }
         }
         

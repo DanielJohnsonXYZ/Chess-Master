@@ -7,6 +7,7 @@ class ChessEngine {
         this.selectedSquare = null;
         this.possibleMoves = [];
         this.gameOver = false;
+        this.gameResult = null;
         this.moveCount = 1;
         
         this.pieceSymbols = {
@@ -345,8 +346,11 @@ class ChessEngine {
         
         // Switch player after getting feedback
         this.switchPlayer();
-        this.updateGameInfo();
         
+        // Check for game ending conditions
+        this.checkGameEnding();
+        
+        this.updateGameInfo();
         this.renderBoard();
         this.updateMoveHistory();
     }
@@ -646,6 +650,7 @@ class ChessEngine {
             this.selectedSquare = null;
             this.possibleMoves = [];
             this.gameOver = false;
+            this.gameResult = null;
             this.moveCount = 1;
             
             // Clear any existing highlights
@@ -675,6 +680,105 @@ class ChessEngine {
             if (window.errorHandler) {
                 window.errorHandler.handleError(error, 'New Game');
             }
+        }
+    }
+    
+    // Check for game ending conditions
+    checkGameEnding() {
+        const validMoves = this.getAllValidMovesForColor(this.currentPlayer);
+        const inCheck = this.isInCheck(this.currentPlayer);
+        
+        if (validMoves.length === 0) {
+            this.gameOver = true;
+            if (inCheck) {
+                // Checkmate
+                this.gameResult = `${this.currentPlayer === 'white' ? 'Black' : 'White'} wins by checkmate!`;
+                console.log('Game ended: Checkmate');
+            } else {
+                // Stalemate
+                this.gameResult = 'Draw by stalemate!';
+                console.log('Game ended: Stalemate');
+            }
+            
+            // Show game ending message
+            this.showGameEndMessage();
+        } else if (this.isInsufficientMaterial()) {
+            // Draw by insufficient material
+            this.gameOver = true;
+            this.gameResult = 'Draw by insufficient material!';
+            this.showGameEndMessage();
+        }
+    }
+    
+    // Get all valid moves for a color
+    getAllValidMovesForColor(color) {
+        const moves = [];
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const piece = this.board[row][col];
+                if (piece && piece.color === color) {
+                    const pieceMoves = this.getPossibleMoves(row, col);
+                    moves.push(...pieceMoves);
+                }
+            }
+        }
+        return moves;
+    }
+    
+    // Check if king is in check
+    isInCheck(color) {
+        const kingPosition = this.findKing(color);
+        if (!kingPosition) return false;
+        
+        return this.isSquareAttacked(kingPosition[0], kingPosition[1], color === 'white' ? 'black' : 'white');
+    }
+    
+    // Check for insufficient material
+    isInsufficientMaterial() {
+        const pieces = { white: [], black: [] };
+        
+        for (let row = 0; row < 8; row++) {
+            for (let col = 0; col < 8; col++) {
+                const piece = this.board[row][col];
+                if (piece) {
+                    pieces[piece.color].push(piece.type);
+                }
+            }
+        }
+        
+        // King vs King
+        if (pieces.white.length === 1 && pieces.black.length === 1) {
+            return true;
+        }
+        
+        // King + Bishop/Knight vs King
+        const whitePieces = pieces.white.filter(p => p !== 'king');
+        const blackPieces = pieces.black.filter(p => p !== 'king');
+        
+        if ((whitePieces.length === 0 && blackPieces.length === 1 && ['bishop', 'knight'].includes(blackPieces[0])) ||
+            (blackPieces.length === 0 && whitePieces.length === 1 && ['bishop', 'knight'].includes(whitePieces[0]))) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // Show game ending message
+    showGameEndMessage() {
+        const feedbackElement = document.getElementById('tutor-feedback');
+        const currentPlayerEl = document.getElementById('current-player');
+        
+        if (feedbackElement) {
+            feedbackElement.innerHTML = `
+                <div class="game-end-message" style="padding: 16px; background: var(--color-accent-subtle); border-radius: 8px; text-align: center;">
+                    <h3 style="margin: 0 0 8px 0; color: var(--color-accent);">${this.gameResult}</h3>
+                    <p style="margin: 0; font-size: 0.875rem;">Click "New Game" to play again.</p>
+                </div>
+            `;
+        }
+        
+        if (currentPlayerEl) {
+            currentPlayerEl.textContent = this.gameResult;
         }
     }
 }
