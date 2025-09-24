@@ -299,18 +299,17 @@ class ChessAI {
             for (let col = 0; col < 8; col++) {
                 const piece = chessEngine.board[row][col];
                 if (piece && piece.color === color) {
-                    const pieceMoves = chessEngine.getPossibleMoves(row, col);
+                    // Use the new method that doesn't check currentPlayer
+                    const pieceMoves = chessEngine.getPossibleMovesForPiece(row, col, piece);
                     
                     for (const [toRow, toCol] of pieceMoves) {
-                        if (chessEngine.isValidMove(row, col, toRow, toCol)) {
-                            moves.push({
-                                fromRow: row,
-                                fromCol: col,
-                                toRow: toRow,
-                                toCol: toCol,
-                                piece: piece
-                            });
-                        }
+                        moves.push({
+                            fromRow: row,
+                            fromCol: col,
+                            toRow: toRow,
+                            toCol: toCol,
+                            piece: piece
+                        });
                     }
                 }
             }
@@ -335,45 +334,8 @@ class ChessAI {
                 const bestMove = this.getBestMove(chessEngine);
                 
                 if (bestMove) {
-                    // Use the chess engine's existing move logic
-                    const piece = chessEngine.board[bestMove.fromRow][bestMove.fromCol];
-                    
-                    // Capture the piece if there is one
-                    const capturedPiece = chessEngine.board[bestMove.toRow][bestMove.toCol];
-                    if (capturedPiece) {
-                        chessEngine.capturedPieces[capturedPiece.color].push(capturedPiece);
-                    }
-                    
-                    // Make the move
-                    chessEngine.board[bestMove.toRow][bestMove.toCol] = piece;
-                    chessEngine.board[bestMove.fromRow][bestMove.fromCol] = null;
-                    
-                    // Add to move history
-                    const moveNotation = this.getMoveNotation(bestMove, piece, capturedPiece);
-                    chessEngine.moveHistory.push({
-                        from: [bestMove.fromRow, bestMove.fromCol],
-                        to: [bestMove.toRow, bestMove.toCol],
-                        piece: piece,
-                        captured: capturedPiece,
-                        notation: moveNotation,
-                        moveNumber: chessEngine.moveCount
-                    });
-                    
-                    // Update game state
-                    if (chessEngine.currentPlayer === 'white') {
-                        chessEngine.moveCount++;
-                    }
-                    chessEngine.currentPlayer = chessEngine.currentPlayer === 'white' ? 'black' : 'white';
-                    
-                    // Update display
-                    chessEngine.renderBoard();
-                    chessEngine.updateGameInfo();
-                    
-                    // Trigger AI feedback for AI's own move
-                    const lastMove = chessEngine.moveHistory[chessEngine.moveHistory.length - 1];
-                    if (window.aiTutor) {
-                        window.aiTutor.analyzeMoveAndProvideFeedback(lastMove);
-                    }
+                    // Use the chess engine's existing makeMove method to ensure all state is updated properly
+                    chessEngine.makeMove(bestMove.fromRow, bestMove.fromCol, bestMove.toRow, bestMove.toCol);
                 }
                 
                 // Hide thinking indicator
@@ -404,21 +366,35 @@ class ChessAI {
     getOpeningBookMove(chessEngine) {
         if (chessEngine.moveHistory.length > 10) return null; // Only use in opening
         
-        // Create position key from move history
+        // Create position key from move history - filter out undefined notations
         const moveSequence = chessEngine.moveHistory
             .map(move => move.notation)
+            .filter(notation => notation && notation !== 'undefined')
             .join(',');
         
         // Look for moves in opening book
         const bookMoves = this.openingBook[moveSequence];
-        if (!bookMoves || bookMoves.length === 0) return null;
+        if (!bookMoves || bookMoves.length === 0) {
+            // Also try with partial sequences for flexibility
+            const partialSequence = moveSequence.split(',').slice(-2).join(',');
+            const partialMoves = this.openingBook[partialSequence];
+            if (!partialMoves || partialMoves.length === 0) return null;
+            
+            // Use partial sequence moves
+            const randomMove = partialMoves[Math.floor(Math.random() * partialMoves.length)];
+            const move = this.parseMove(randomMove, chessEngine);
+            if (move && this.isValidMoveForColor(chessEngine, move, this.color)) {
+                return move;
+            }
+            return null;
+        }
         
         // Pick a random move from the book
         const randomMove = bookMoves[Math.floor(Math.random() * bookMoves.length)];
         
         // Convert notation to move object
         const move = this.parseMove(randomMove, chessEngine);
-        if (move && chessEngine.isValidMove(move.fromRow, move.fromCol, move.toRow, move.toCol)) {
+        if (move && this.isValidMoveForColor(chessEngine, move, this.color)) {
             return move;
         }
         
@@ -450,6 +426,14 @@ class ChessAI {
         }
         
         return null;
+    }
+    
+    // Check if move is valid for a specific color
+    isValidMoveForColor(chessEngine, move, color) {
+        const piece = chessEngine.board[move.fromRow][move.fromCol];
+        return piece && piece.color === color && 
+               chessEngine.getPossibleMovesForPiece(move.fromRow, move.fromCol, piece)
+                   .some(([r, c]) => r === move.toRow && c === move.toCol);
     }
     
     // Set difficulty level (1-5)

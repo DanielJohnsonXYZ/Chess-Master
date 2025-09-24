@@ -148,6 +148,13 @@ class ChessEngine {
         const piece = this.board[row][col];
         if (!piece || piece.color !== this.currentPlayer) return [];
         
+        return this.getPossibleMovesForPiece(row, col, piece);
+    }
+    
+    // New method that doesn't check currentPlayer - used by AI minimax
+    getPossibleMovesForPiece(row, col, piece) {
+        if (!piece) return [];
+        
         const moves = [];
         
         switch (piece.type) {
@@ -319,14 +326,20 @@ class ChessEngine {
         const piece = this.board[fromRow][fromCol];
         const capturedPiece = this.board[toRow][toCol];
         
-        // Record move
+        // Record move with notation
         const move = {
             from: [fromRow, fromCol],
             to: [toRow, toCol],
             piece: piece,
             captured: capturedPiece,
             player: this.currentPlayer,
-            moveNumber: Math.ceil(this.moveHistory.length / 2) + 1
+            moveNumber: Math.ceil(this.moveHistory.length / 2) + 1,
+            notation: this.getMoveNotation({
+                from: [fromRow, fromCol],
+                to: [toRow, toCol],
+                piece: piece,
+                captured: capturedPiece
+            })
         };
         
         this.moveHistory.push(move);
