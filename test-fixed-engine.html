@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Engine Test - All Rules</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            color: #4ade80;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: 600px 1fr;
+            gap: 30px;
+        }
+        #chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 70px);
+            grid-template-rows: repeat(8, 70px);
+            border: 3px solid #4ade80;
+            box-shadow: 0 4px 20px rgba(74, 222, 128, 0.3);
+        }
+        .square {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .square.light {
+            background: #f0d9b5;
+        }
+        .square.dark {
+            background: #b58863;
+        }
+        .square.selected {
+            background: #7dd3fc !important;
+            box-shadow: inset 0 0 0 3px #0284c7;
+        }
+        .square.possible-move {
+            background: #bef264 !important;
+            cursor: pointer;
+        }
+        .square:hover {
+            opacity: 0.8;
+        }
+        .info-panel {
+            background: #262626;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .status {
+            font-size: 18px;
+            font-weight: 600;
+            padding: 15px;
+            background: #374151;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .test-section {
+            background: #1f2937;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #4ade80;
+            font-size: 16px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .test-pass {
+            background: #065f46;
+            color: #d1fae5;
+        }
+        .test-fail {
+            background: #991b1b;
+            color: #fecaca;
+        }
+        button {
+            background: #4ade80;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin: 5px 0;
+        }
+        button:hover {
+            background: #22c55e;
+        }
+        .move-history {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #1f2937;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <h1>♟️ Chess Engine Test Suite</h1>
+
+    <div class="container">
+        <div>
+            <div id="chess-board"></div>
+            <div style="margin-top: 20px;">
+                <button onclick="chessEngine.newGame()">New Game</button>
+                <button onclick="runAllTests()">Run All Tests</button>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <div class="status" id="game-status">White to move</div>
+
+            <div class="test-section">
+                <h3>📊 Game Info</h3>
+                <div id="game-info">
+                    <div>Move: <span id="move-counter">1</span></div>
+                    <div>FEN: <span id="fen-display" style="font-size: 11px; word-break: break-all;"></span></div>
+                </div>
+            </div>
+
+            <div class="test-section">
+                <h3>🧪 Test Results</h3>
+                <div id="test-results"></div>
+            </div>
+
+            <div class="test-section">
+                <h3>📜 Move History</h3>
+                <div class="move-history" id="move-history"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load chess.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+
+    <!-- Load fixed chess engine -->
+    <script src="chess-engine-fixed.js"></script>
+
+    <script>
+        // Initialize engine
+        const chessEngine = new ChessEngine();
+        chessEngine.renderBoard();
+        updateInfo();
+
+        // Update info display
+        function updateInfo() {
+            document.getElementById('game-status').textContent =
+                chessEngine.gameOver ? chessEngine.gameResult :
+                `${chessEngine.currentPlayer.charAt(0).toUpperCase() + chessEngine.currentPlayer.slice(1)} to move`;
+
+            document.getElementById('move-counter').textContent = chessEngine.moveCount;
+            document.getElementById('fen-display').textContent = chessEngine.fen();
+
+            const historyEl = document.getElementById('move-history');
+            historyEl.innerHTML = chessEngine.moveHistory
+                .map((m, i) => `${i + 1}. ${m.notation}`)
+                .join('<br>');
+        }
+
+        // Override makeMove to update info
+        const originalMakeMove = chessEngine.makeMove.bind(chessEngine);
+        chessEngine.makeMove = function(...args) {
+            originalMakeMove(...args);
+            updateInfo();
+        };
+
+        // Test suite
+        async function runAllTests() {
+            const resultsEl = document.getElementById('test-results');
+            resultsEl.innerHTML = '<div>Running tests...</div>';
+
+            const results = [];
+
+            // Test 1: Castling
+            results.push(await testCastling());
+
+            // Test 2: En Passant
+            results.push(await testEnPassant());
+
+            // Test 3: Pawn Promotion
+            results.push(await testPawnPromotion());
+
+            // Test 4: Check Detection
+            results.push(await testCheckDetection());
+
+            // Test 5: Checkmate
+            results.push(await testCheckmate());
+
+            // Test 6: Stalemate
+            results.push(await testStalemate());
+
+            // Display results
+            resultsEl.innerHTML = results.map(r =>
+                `<div class="test-result test-${r.pass ? 'pass' : 'fail'}">
+                    ${r.pass ? '✅' : '❌'} ${r.name}: ${r.message}
+                </div>`
+            ).join('');
+        }
+
+        async function testCastling() {
+            try {
+                chessEngine.newGame();
+
+                // Set up position for castling (remove pieces between king and rook)
+                chessEngine.loadFen('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1');
+
+                // Get king's possible moves
+                const kingMoves = chessEngine.getPossibleMoves(7, 4);
+
+                // Check if castling moves are available
+                const canCastleKingside = kingMoves.some(([r, c]) => r === 7 && c === 6);
+                const canCastleQueenside = kingMoves.some(([r, c]) => r === 7 && c === 2);
+
+                if (canCastleKingside || canCastleQueenside) {
+                    return {
+                        name: 'Castling',
+                        pass: true,
+                        message: `Both sides available: K=${canCastleKingside}, Q=${canCastleQueenside}`
+                    };
+                } else {
+                    return {
+                        name: 'Castling',
+                        pass: false,
+                        message: 'No castling moves found'
+                    };
+                }
+            } catch (e) {
+                return { name: 'Castling', pass: false, message: e.message };
+            }
+        }
+
+        async function testEnPassant() {
+            try {
+                chessEngine.newGame();
+
+                // Set up en passant position: black pawn on e4, white pawn moves from d2 to d4
+                chessEngine.loadFen('8/8/8/8/4p3/8/3P4/8 w - - 0 1');
+
+                // Make the double pawn push
+                chessEngine.makeMove(6, 3, 4, 3); // d2-d4
+
+                // Check if en passant capture is available
+                const blackPawnMoves = chessEngine.getPossibleMoves(4, 4);
+                const canEnPassant = blackPawnMoves.some(([r, c]) => r === 5 && c === 3);
+
+                if (canEnPassant) {
+                    return {
+                        name: 'En Passant',
+                        pass: true,
+                        message: 'En passant capture available'
+                    };
+                } else {
+                    return {
+                        name: 'En Passant',
+                        pass: false,
+                        message: 'En passant not detected'
+                    };
+                }
+            } catch (e) {
+                return { name: 'En Passant', pass: false, message: e.message };
+            }
+        }
+
+        async function testPawnPromotion() {
+            try {
+                chessEngine.newGame();
+
+                // Set up pawn about to promote
+                chessEngine.loadFen('8/P7/8/8/8/8/8/8 w - - 0 1');
+
+                // Get the pawn's moves
+                const pawnMoves = chessEngine.getPossibleMoves(1, 0);
+
+                // Check if pawn can move to promotion square
+                const canPromote = pawnMoves.some(([r, c]) => r === 0 && c === 0);
+
+                if (canPromote) {
+                    return {
+                        name: 'Pawn Promotion',
+                        pass: true,
+                        message: 'Promotion move available'
+                    };
+                } else {
+                    return {
+                        name: 'Pawn Promotion',
+                        pass: false,
+                        message: 'Cannot reach promotion square'
+                    };
+                }
+            } catch (e) {
+                return { name: 'Pawn Promotion', pass: false, message: e.message };
+            }
+        }
+
+        async function testCheckDetection() {
+            try {
+                chessEngine.newGame();
+
+                // Set up position where white king is in check
+                chessEngine.loadFen('4k3/8/8/8/8/8/4r3/4K3 w - - 0 1');
+
+                const inCheck = chessEngine.isInCheck('white');
+
+                if (inCheck) {
+                    return {
+                        name: 'Check Detection',
+                        pass: true,
+                        message: 'Check correctly detected'
+                    };
+                } else {
+                    return {
+                        name: 'Check Detection',
+                        pass: false,
+                        message: 'Failed to detect check'
+                    };
+                }
+            } catch (e) {
+                return { name: 'Check Detection', pass: false, message: e.message };
+            }
+        }
+
+        async function testCheckmate() {
+            try {
+                chessEngine.newGame();
+
+                // Classic back rank mate
+                chessEngine.loadFen('6k1/5ppp/8/8/8/8/8/4R2K b - - 0 1');
+                chessEngine.makeMove(0, 4, 1, 4); // Random king move
+                chessEngine.makeMove(7, 4, 0, 4); // Re8#
+
+                if (chessEngine.gameOver && chessEngine.gameResult.includes('checkmate')) {
+                    return {
+                        name: 'Checkmate Detection',
+                        pass: true,
+                        message: 'Checkmate correctly detected'
+                    };
+                } else {
+                    return {
+                        name: 'Checkmate Detection',
+                        pass: false,
+                        message: 'Failed to detect checkmate'
+                    };
+                }
+            } catch (e) {
+                return { name: 'Checkmate Detection', pass: false, message: e.message };
+            }
+        }
+
+        async function testStalemate() {
+            try {
+                chessEngine.newGame();
+
+                // Classic stalemate position
+                chessEngine.loadFen('k7/8/1Q6/8/8/8/8/7K b - - 0 1');
+
+                if (chessEngine.gameOver && chessEngine.gameResult.includes('stalemate')) {
+                    return {
+                        name: 'Stalemate Detection',
+                        pass: true,
+                        message: 'Stalemate correctly detected'
+                    };
+                } else {
+                    return {
+                        name: 'Stalemate Detection',
+                        pass: false,
+                        message: 'Failed to detect stalemate'
+                    };
+                }
+            } catch (e) {
+                return { name: 'Stalemate Detection', pass: false, message: e.message };
+            }
+        }
+
+        console.log('Chess engine test page loaded. Click "Run All Tests" to verify all rules!');
+    </script>
+</body>
+</html>

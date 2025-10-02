@@ -1,0 +1,23 @@
+{
+  "name": "chess-master",
+  "version": "1.0.0",
+  "description": "A high-quality web application that helps players improve their chess skills through real-time AI feedback and pattern recognition.",
+  "main": "ai-enhanced.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanielJohnsonXYZ/Chess-Master.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DanielJohnsonXYZ/Chess-Master/issues"
+  },
+  "homepage": "https://github.com/DanielJohnsonXYZ/Chess-Master#readme",
+  "dependencies": {
+    "chess.js": "^1.4.0"
+  }
+}
