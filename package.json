@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/DanielJohnsonXYZ/Chess-Master#readme",
   "dependencies": {
-    "chess.js": "^1.4.0"
+    "chess.js": "^1.4.0",
+    "stockfish": "^17.1.0"
   }
 }

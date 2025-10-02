@@ -17,33 +17,27 @@ class StockfishEngine {
 
     async initializeEngine() {
         try {
-            // Try external Stockfish sources first
-            const stockfishSources = [
-                'https://cdn.jsdelivr.net/npm/stockfish@15.0.0/src/stockfish.js',
-                'https://unpkg.com/stockfish@15.0.0/src/stockfish.js'
+            // Try local Stockfish first (from node_modules)
+            const localStockfishSources = [
+                'node_modules/stockfish/src/stockfish-17.1-lite-single-03e3232.js',
+                'node_modules/stockfish/src/stockfish-17.1-asm-341ff22.js'
             ];
-            
-            for (const src of stockfishSources) {
+
+            for (const src of localStockfishSources) {
                 try {
-                    // Use timeout with fallback if asyncHelper not available
-                    const loadPromise = this.loadStockfishScript(src);
-                    const timeoutPromise = new Promise((_, reject) => {
-                        setTimeout(() => reject(new Error('Load timeout')), 5000);
-                    });
-                    
-                    await Promise.race([loadPromise, timeoutPromise]);
+                    console.log(`Attempting to load local Stockfish from ${src}...`);
                     this.loadEngine(src);
-                    console.log('External Stockfish engine loaded successfully');
+                    console.log('Local Stockfish engine loaded successfully');
                     return;
                 } catch (error) {
                     console.warn(`Failed to load Stockfish from ${src}:`, error);
                 }
             }
-            
-            // Fallback to local engine
-            console.log('Falling back to local chess engine');
+
+            // Fallback to custom local engine
+            console.log('Falling back to custom local chess engine');
             this.loadLocalEngine();
-            
+
         } catch (error) {
             console.error('Error initializing chess engine:', error);
             this.callbacks.onError?.(error.message);

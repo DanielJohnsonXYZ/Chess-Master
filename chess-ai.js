@@ -1,7 +1,8 @@
 class ChessAI {
     constructor(difficulty = 3) {
         this.difficulty = difficulty; // 1-5 scale
-        this.maxDepth = Math.min(difficulty + 1, 4); // Limit depth for performance
+        // Reduced depth for much faster performance
+        this.maxDepth = difficulty <= 2 ? 1 : 2; // Max depth 2 for responsive play
         this.color = 'black'; // AI plays as black by default
         
         // Opening book - common strong opening moves
@@ -106,12 +107,14 @@ class ChessAI {
         // Check for opening book moves first
         const bookMove = this.getOpeningBookMove(chessEngine);
         if (bookMove) {
+            console.log('AI: Using opening book move');
             return bookMove;
         }
-        
+
         let moves;
         try {
             moves = this.getAllValidMoves(chessEngine, this.color);
+            console.log(`AI: Found ${moves.length} possible moves`);
             if (moves.length === 0) {
                 return null;
             }
@@ -119,22 +122,40 @@ class ChessAI {
             console.error('Error in AI move generation:', error);
             return null;
         }
-        
+
         // Sort moves to prioritize captures and checks
         moves.sort((a, b) => this.getMoveScore(chessEngine, b) - this.getMoveScore(chessEngine, a));
-        
+
+        // Only evaluate top N moves for speed (more for higher difficulty)
+        const maxMovesToEvaluate = this.difficulty <= 2 ? 10 : 15;
+        const movesToEvaluate = moves.slice(0, maxMovesToEvaluate);
+
+        // Log top 5 moves by initial score
+        console.log(`AI: Evaluating ${movesToEvaluate.length} of ${moves.length} moves (difficulty ${this.difficulty}, depth ${this.maxDepth})`);
+        console.log('AI: Top 5 moves by initial score:');
+        for (let i = 0; i < Math.min(5, movesToEvaluate.length); i++) {
+            const move = movesToEvaluate[i];
+            const score = this.getMoveScore(chessEngine, move);
+            const captured = chessEngine.board[move.toRow][move.toCol];
+            const moveStr = `${this.coordsToAlgebraic(move.fromRow, move.fromCol)}->${this.coordsToAlgebraic(move.toRow, move.toCol)}`;
+            console.log(`  ${moveStr}: score ${score}${captured ? ' (CAPTURE ' + captured.type + ')' : ''}`);
+        }
+
         let bestMove = null;
         let bestScore = -Infinity;
-        
-        for (const move of moves) {
+
+        for (const move of movesToEvaluate) {
             const score = this.minimax(chessEngine, move, this.maxDepth - 1, -Infinity, Infinity, false);
-            
+
             if (score > bestScore) {
                 bestScore = score;
                 bestMove = move;
             }
         }
-        
+
+        const bestMoveStr = bestMove ? `${this.coordsToAlgebraic(bestMove.fromRow, bestMove.fromCol)}->${this.coordsToAlgebraic(bestMove.toRow, bestMove.toCol)}` : 'none';
+        console.log(`AI: Best move selected: ${bestMoveStr} with score ${bestScore}`);
+
         return bestMove;
     }
     
@@ -174,45 +195,105 @@ class ChessAI {
     
     // Minimax algorithm with alpha-beta pruning
     minimax(chessEngine, move, depth, alpha, beta, isMaximizing) {
-        // Make the move temporarily
-        const originalBoard = this.copyBoard(chessEngine.board);
-        const capturedPiece = chessEngine.board[move.toRow][move.toCol];
-        
-        chessEngine.board[move.toRow][move.toCol] = chessEngine.board[move.fromRow][move.fromCol];
-        chessEngine.board[move.fromRow][move.fromCol] = null;
-        
         let score;
-        
-        if (depth === 0) {
-            score = this.evaluatePosition(chessEngine);
-        } else {
-            const currentColor = isMaximizing ? this.color : (this.color === 'white' ? 'black' : 'white');
-            const moves = this.getAllValidMoves(chessEngine, currentColor);
-            
-            if (moves.length === 0) {
-                // Checkmate or stalemate
-                score = isMaximizing ? -10000 : 10000;
-            } else if (isMaximizing) {
-                score = -Infinity;
-                for (const nextMove of moves) {
-                    score = Math.max(score, this.minimax(chessEngine, nextMove, depth - 1, alpha, beta, false));
-                    alpha = Math.max(alpha, score);
-                    if (beta <= alpha) break; // Alpha-beta pruning
-                }
+        let moveResult = null;
+
+        // Make the move temporarily
+        if (chessEngine.chess) {
+            // Save FEN for undo
+            const savedFen = chessEngine.chess.fen();
+
+            // Make move using chess.js
+            const from = this.coordsToAlgebraic(move.fromRow, move.fromCol);
+            const to = this.coordsToAlgebraic(move.toRow, move.toCol);
+
+            moveResult = chessEngine.chess.move({ from, to, promotion: 'q' });
+
+            if (!moveResult) {
+                // Invalid move, return worst score
+                return isMaximizing ? -100000 : 100000;
+            }
+
+            // Update board representation
+            chessEngine.board = chessEngine.initializeBoard();
+
+            if (depth === 0) {
+                score = this.evaluatePosition(chessEngine);
             } else {
-                score = Infinity;
-                for (const nextMove of moves) {
-                    score = Math.min(score, this.minimax(chessEngine, nextMove, depth - 1, alpha, beta, true));
-                    beta = Math.min(beta, score);
-                    if (beta <= alpha) break; // Alpha-beta pruning
+                const currentColor = isMaximizing ? this.color : (this.color === 'white' ? 'black' : 'white');
+                const moves = this.getAllValidMoves(chessEngine, currentColor);
+
+                if (moves.length === 0) {
+                    // Checkmate or stalemate
+                    if (chessEngine.chess.in_checkmate()) {
+                        score = isMaximizing ? -10000 : 10000;
+                    } else {
+                        score = 0; // Stalemate
+                    }
+                } else if (isMaximizing) {
+                    score = -Infinity;
+                    for (const nextMove of moves) {
+                        score = Math.max(score, this.minimax(chessEngine, nextMove, depth - 1, alpha, beta, false));
+                        alpha = Math.max(alpha, score);
+                        if (beta <= alpha) break; // Alpha-beta pruning
+                    }
+                } else {
+                    score = Infinity;
+                    for (const nextMove of moves) {
+                        score = Math.min(score, this.minimax(chessEngine, nextMove, depth - 1, alpha, beta, true));
+                        beta = Math.min(beta, score);
+                        if (beta <= alpha) break; // Alpha-beta pruning
+                    }
                 }
             }
+
+            // Restore the position
+            chessEngine.chess.load(savedFen);
+            chessEngine.board = chessEngine.initializeBoard();
+        } else {
+            // Original implementation for old chess-engine.js
+            const originalBoard = this.copyBoard(chessEngine.board);
+            const capturedPiece = chessEngine.board[move.toRow][move.toCol];
+
+            chessEngine.board[move.toRow][move.toCol] = chessEngine.board[move.fromRow][move.fromCol];
+            chessEngine.board[move.fromRow][move.fromCol] = null;
+
+            if (depth === 0) {
+                score = this.evaluatePosition(chessEngine);
+            } else {
+                const currentColor = isMaximizing ? this.color : (this.color === 'white' ? 'black' : 'white');
+                const moves = this.getAllValidMoves(chessEngine, currentColor);
+
+                if (moves.length === 0) {
+                    score = isMaximizing ? -10000 : 10000;
+                } else if (isMaximizing) {
+                    score = -Infinity;
+                    for (const nextMove of moves) {
+                        score = Math.max(score, this.minimax(chessEngine, nextMove, depth - 1, alpha, beta, false));
+                        alpha = Math.max(alpha, score);
+                        if (beta <= alpha) break;
+                    }
+                } else {
+                    score = Infinity;
+                    for (const nextMove of moves) {
+                        score = Math.min(score, this.minimax(chessEngine, nextMove, depth - 1, alpha, beta, true));
+                        beta = Math.min(beta, score);
+                        if (beta <= alpha) break;
+                    }
+                }
+            }
+
+            chessEngine.board = originalBoard;
         }
-        
-        // Restore the board
-        chessEngine.board = originalBoard;
-        
+
         return score;
+    }
+
+    // Convert coordinates to algebraic notation
+    coordsToAlgebraic(row, col) {
+        const file = String.fromCharCode(97 + col);
+        const rank = 8 - row;
+        return file + rank;
     }
     
     // Evaluate the current position
@@ -294,28 +375,57 @@ class ChessAI {
     // Get all valid moves for a given color
     getAllValidMoves(chessEngine, color) {
         const moves = [];
-        
-        for (let row = 0; row < 8; row++) {
-            for (let col = 0; col < 8; col++) {
-                const piece = chessEngine.board[row][col];
+
+        // Check if using chess.js wrapper
+        if (chessEngine.chess) {
+            // Using chess-engine-fixed.js with chess.js
+            const chessMoves = chessEngine.chess.moves({ verbose: true });
+
+            for (const move of chessMoves) {
+                const fromPos = this.algebraicToCoords(move.from);
+                const toPos = this.algebraicToCoords(move.to);
+                const piece = chessEngine.board[fromPos.row][fromPos.col];
+
                 if (piece && piece.color === color) {
-                    // Use the new method that doesn't check currentPlayer
-                    const pieceMoves = chessEngine.getPossibleMovesForPiece(row, col, piece);
-                    
-                    for (const [toRow, toCol] of pieceMoves) {
-                        moves.push({
-                            fromRow: row,
-                            fromCol: col,
-                            toRow: toRow,
-                            toCol: toCol,
-                            piece: piece
-                        });
+                    moves.push({
+                        fromRow: fromPos.row,
+                        fromCol: fromPos.col,
+                        toRow: toPos.row,
+                        toCol: toPos.col,
+                        piece: piece
+                    });
+                }
+            }
+        } else {
+            // Using original chess-engine.js
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const piece = chessEngine.board[row][col];
+                    if (piece && piece.color === color) {
+                        const pieceMoves = chessEngine.getPossibleMovesForPiece(row, col, piece);
+
+                        for (const [toRow, toCol] of pieceMoves) {
+                            moves.push({
+                                fromRow: row,
+                                fromCol: col,
+                                toRow: toRow,
+                                toCol: toCol,
+                                piece: piece
+                            });
+                        }
                     }
                 }
             }
         }
-        
+
         return moves;
+    }
+
+    // Convert algebraic notation (e2) to coordinates
+    algebraicToCoords(square) {
+        const col = square.charCodeAt(0) - 97; // a=0, b=1, etc
+        const row = 8 - parseInt(square[1]); // 8=0, 7=1, etc
+        return { row, col };
     }
     
     // Create a deep copy of the board
@@ -341,7 +451,7 @@ class ChessAI {
                 // Hide thinking indicator
                 this.showThinkingIndicator(false);
                 resolve(bestMove);
-            }, 500 + Math.random() * 1000); // Random delay between 0.5-1.5 seconds
+            }, 200); // Short delay to show thinking indicator
         });
     }
     
@@ -439,7 +549,8 @@ class ChessAI {
     // Set difficulty level (1-5)
     setDifficulty(level) {
         this.difficulty = Math.max(1, Math.min(5, level));
-        this.maxDepth = Math.min(this.difficulty + 1, 4);
+        // Optimized depth for performance
+        this.maxDepth = this.difficulty <= 2 ? 1 : 2;
     }
     
     // Set AI color

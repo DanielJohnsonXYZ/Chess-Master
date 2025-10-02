@@ -368,7 +368,7 @@ class ChessEngine {
         }
 
         // Show check status
-        if (this.chess.inCheck()) {
+        if (this.chess.in_check()) {
             if (currentPlayerEl) {
                 currentPlayerEl.textContent += ' (IN CHECK!)';
             }
@@ -487,23 +487,23 @@ class ChessEngine {
     }
 
     checkGameEnding() {
-        if (this.chess.isCheckmate()) {
+        if (this.chess.in_checkmate()) {
             this.gameOver = true;
             this.gameResult = `${this.currentPlayer === 'white' ? 'Black' : 'White'} wins by checkmate!`;
             this.showGameEndMessage();
-        } else if (this.chess.isStalemate()) {
+        } else if (this.chess.in_stalemate()) {
             this.gameOver = true;
             this.gameResult = 'Draw by stalemate!';
             this.showGameEndMessage();
-        } else if (this.chess.isThreefoldRepetition()) {
+        } else if (this.chess.in_threefold_repetition()) {
             this.gameOver = true;
             this.gameResult = 'Draw by threefold repetition!';
             this.showGameEndMessage();
-        } else if (this.chess.isInsufficientMaterial()) {
+        } else if (this.chess.insufficient_material()) {
             this.gameOver = true;
             this.gameResult = 'Draw by insufficient material!';
             this.showGameEndMessage();
-        } else if (this.chess.isDraw()) {
+        } else if (this.chess.in_draw()) {
             this.gameOver = true;
             this.gameResult = 'Draw!';
             this.showGameEndMessage();
@@ -518,11 +518,11 @@ class ChessEngine {
     }
 
     isInCheck(color) {
-        return this.chess.inCheck() && this.chess.turn() === color[0];
+        return this.chess.in_check() && this.chess.turn() === color[0];
     }
 
     isInsufficientMaterial() {
-        return this.chess.isInsufficientMaterial();
+        return this.chess.insufficient_material();
     }
 
     showGameEndMessage() {
